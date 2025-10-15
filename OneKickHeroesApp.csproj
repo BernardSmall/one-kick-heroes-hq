@@ -46,75 +46,75 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FormHome.cs">
+    <Compile Include="Presentation\Forms\FormHome.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="FormHome.Designer.cs">
+    <Compile Include="Presentation\Forms\FormHome.Designer.cs">
       <DependentUpon>FormHome.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\FormAddHero.cs">
+    <Compile Include="Presentation\Forms\FormAddHero.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\FormAddHero.Designer.cs">
+    <Compile Include="Presentation\Forms\FormAddHero.Designer.cs">
       <DependentUpon>FormAddHero.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\FormDeleteHero.cs">
+    <Compile Include="Presentation\Forms\FormDeleteHero.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\FormDeleteHero.Designer.cs">
+    <Compile Include="Presentation\Forms\FormDeleteHero.Designer.cs">
       <DependentUpon>FormDeleteHero.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\FormHeroSummary.cs">
+    <Compile Include="Presentation\Forms\FormHeroSummary.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\FormHeroSummary.Designer.cs">
+    <Compile Include="Presentation\Forms\FormHeroSummary.Designer.cs">
       <DependentUpon>FormHeroSummary.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\FormImportExport.cs">
+    <Compile Include="Presentation\Forms\FormImportExport.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\FormImportExport.Designer.cs">
+    <Compile Include="Presentation\Forms\FormImportExport.Designer.cs">
       <DependentUpon>FormImportExport.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\FormSummary.cs">
+    <Compile Include="Presentation\Forms\FormSummary.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\FormSummary.Designer.cs">
+    <Compile Include="Presentation\Forms\FormSummary.Designer.cs">
       <DependentUpon>FormSummary.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\FormUpdateHero.cs">
+    <Compile Include="Presentation\Forms\FormUpdateHero.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\FormUpdateHero.Designer.cs">
+    <Compile Include="Presentation\Forms\FormUpdateHero.Designer.cs">
       <DependentUpon>FormUpdateHero.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\FormViewAll.cs">
+    <Compile Include="Presentation\Forms\FormViewAll.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\FormViewAll.Designer.cs">
+    <Compile Include="Presentation\Forms\FormViewAll.Designer.cs">
       <DependentUpon>FormViewAll.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="FormHome.resx">
+    <EmbeddedResource Include="Presentation\Forms\FormHome.resx">
       <DependentUpon>FormHome.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\FormAddHero.resx">
+    <EmbeddedResource Include="Presentation\Forms\FormAddHero.resx">
       <DependentUpon>FormAddHero.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\FormDeleteHero.resx">
+    <EmbeddedResource Include="Presentation\Forms\FormDeleteHero.resx">
       <DependentUpon>FormDeleteHero.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\FormImportExport.resx">
+    <EmbeddedResource Include="Presentation\Forms\FormImportExport.resx">
       <DependentUpon>FormImportExport.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\FormSummary.resx">
+    <EmbeddedResource Include="Presentation\Forms\FormSummary.resx">
       <DependentUpon>FormSummary.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\FormUpdateHero.resx">
+    <EmbeddedResource Include="Presentation\Forms\FormUpdateHero.resx">
       <DependentUpon>FormUpdateHero.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\FormViewAll.resx">
+    <EmbeddedResource Include="Presentation\Forms\FormViewAll.resx">
       <DependentUpon>FormViewAll.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -138,6 +138,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Business\" />
+    <Folder Include="Data\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -10,7 +10,7 @@ namespace OneKickHeroesApp
 {
     public partial class FormHeroSummary : Form
     {
-        // --- Theme ---
+        // ------------- THEME (shared) -------------
         private static class Theme
         {
             public static readonly Color Bg = ColorTranslator.FromHtml("#0d1117");
@@ -27,27 +27,29 @@ namespace OneKickHeroesApp
             public static Font Em { get { return new Font("Segoe UI", 12, FontStyle.Bold); } }
         }
 
-        // Controls
+        // ------------- UI CONTROLS (fields so logic can use them) -------------
+        private Panel card;
         private TextBox txtId;
-        private Button btnLoad;
-        private Button btnSave;
+        private Button btnLoad, btnSave;
+        private Label vName, vAge, vPower, vScore, vRank;
 
-        private Label vName;
-        private Label vAge;
-        private Label vPower;
-        private Label vScore;
-        private Label vRank;
-
+        // ------------- STATE -------------
         private int loadedId = -1;
 
         public FormHeroSummary()
         {
-            InitializeComponent();
-            BuildUI();
+            InitializeComponent();  // minimal designer; UI built in BuildUI()
+            BuildUI();              // <--- ALL UI lives here
         }
+
+        // ======================================================
+        // ===============       UI SECTION       ===============
+        // ======================================================
+        #region UI
 
         private void BuildUI()
         {
+            // Form basics
             Text = "Single Hero Summary";
             BackColor = Theme.Bg;
             ForeColor = Theme.Text;
@@ -66,8 +68,8 @@ namespace OneKickHeroesApp
             };
             Controls.Add(title);
 
-            // Card container
-            var card = new Panel
+            // Card (rounded with border)
+            card = new Panel
             {
                 BackColor = Theme.Surface,
                 Location = new Point(30, 70),
@@ -92,7 +94,7 @@ namespace OneKickHeroesApp
             };
             Controls.Add(card);
 
-            // Top row: ID input + Save button
+            // --- Input row: Hero ID + Load + Save ---
             var lblId = new Label
             {
                 Text = "Hero ID",
@@ -110,28 +112,11 @@ namespace OneKickHeroesApp
                 ForeColor = Theme.Text,
                 BorderStyle = BorderStyle.FixedSingle,
                 Location = new Point(12, 44),
-                Width = card.Width - 12 - 180 - 24,
+                Width = card.Width - 12 - 280,   // space for 2 buttons
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             txtId.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { LoadHero(); e.SuppressKeyPress = true; } };
             card.Controls.Add(txtId);
-
-            btnSave = new Button
-            {
-                Text = "Save Summary to Txt",
-                Font = Theme.Body,
-                ForeColor = Color.White,
-                BackColor = Theme.Accent,
-                FlatStyle = FlatStyle.Flat,
-                Height = txtId.Height + 4,
-                Width = 170,
-                Location = new Point(txtId.Right + 12, txtId.Top - 2),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Enabled = false
-            };
-            btnSave.FlatAppearance.BorderSize = 0;
-            btnSave.Click += (s, e) => SaveSummary();
-            card.Controls.Add(btnSave);
 
             btnLoad = new Button
             {
@@ -142,14 +127,31 @@ namespace OneKickHeroesApp
                 FlatStyle = FlatStyle.Flat,
                 Height = txtId.Height + 4,
                 Width = 100,
-                Location = new Point(btnSave.Left - 112, txtId.Top - 2),
+                Location = new Point(txtId.Right + 12, txtId.Top - 2),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             btnLoad.FlatAppearance.BorderSize = 0;
-            btnLoad.Click += (s, e) => LoadHero();
+            btnLoad.Click += (s, e) => LoadHero();     // <--- wire to logic
             card.Controls.Add(btnLoad);
 
-            // Separator
+            btnSave = new Button
+            {
+                Text = "Save Summary to Txt",
+                Font = Theme.Body,
+                ForeColor = Color.White,
+                BackColor = Theme.Accent,
+                FlatStyle = FlatStyle.Flat,
+                Height = txtId.Height + 4,
+                Width = 170,
+                Location = new Point(btnLoad.Right + 12, txtId.Top - 2),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Enabled = false
+            };
+            btnSave.FlatAppearance.BorderSize = 0;
+            btnSave.Click += (s, e) => SaveSummary();  // <--- wire to logic
+            card.Controls.Add(btnSave);
+
+            // separator
             var sep = new Panel
             {
                 BackColor = Theme.Border,
@@ -160,7 +162,7 @@ namespace OneKickHeroesApp
             };
             card.Controls.Add(sep);
 
-            // Details grid (two columns like the mock)
+            // Two-column details layout
             int leftCol = 12;
             int rightCol = card.Width / 2 + 12;
 
@@ -186,8 +188,10 @@ namespace OneKickHeroesApp
             var lAge = mkLabel(new Point(leftCol, 150)); lAge.Text = "Age:"; card.Controls.Add(lAge);
             vAge = mkValue(new Point(leftCol + 120, 150)); card.Controls.Add(vAge);
 
-            var lPower = mkLabel(new Point(leftCol, 190)); lPower.Text = "Superpower"; card.Controls.Add(lPower);
-            vPower = mkValue(new Point(leftCol + 120, 190)); vPower.MaximumSize = new Size(card.Width - (leftCol + 140), 0); card.Controls.Add(vPower);
+            var lPower = mkLabel(new Point(leftCol, 190)); lPower.Text = "Superpower:"; card.Controls.Add(lPower);
+            vPower = mkValue(new Point(leftCol + 120, 190));
+            vPower.MaximumSize = new Size(card.Width - (leftCol + 140), 0);
+            card.Controls.Add(vPower);
 
             // Right column
             var lScore = mkLabel(new Point(rightCol, 110)); lScore.Text = "Exam Score:"; card.Controls.Add(lScore);
@@ -196,25 +200,32 @@ namespace OneKickHeroesApp
             var lRank = mkLabel(new Point(rightCol, 150)); lRank.Text = "Rank:"; card.Controls.Add(lRank);
             vRank = mkValue(new Point(rightCol + 160, 150)); card.Controls.Add(vRank);
 
-            // Resizing adjustments
+            // Keep things aligned when resizing
             card.SizeChanged += (s, e) =>
             {
-                txtId.Width = card.Width - 12 - 180 - 24;
-                btnSave.Left = card.Width - 12 - btnSave.Width;
-                btnLoad.Left = btnSave.Left - 112;
+                txtId.Width = card.Width - 12 - 280;
+                btnLoad.Left = txtId.Right + 12;
+                btnSave.Left = btnLoad.Right + 12;
+
                 sep.Width = card.Width - 24;
 
                 rightCol = card.Width / 2 + 12;
-                lScore.Left = rightCol;
-                vScore.Left = rightCol + 160;
-                lRank.Left = rightCol;
-                vRank.Left = rightCol + 160;
-
+                lScore.Left = rightCol; vScore.Left = rightCol + 160;
+                lRank.Left = rightCol; vRank.Left = rightCol + 160;
                 vPower.MaximumSize = new Size(card.Width - (leftCol + 140), 0);
             };
         }
 
-        // ---- Actions ----
+        #endregion
+        // ================== END UI SECTION ====================
+
+
+        // ======================================================
+        // ============   EVENT HANDLERS / LOGIC   ==============
+        // ======================================================
+        #region EventHandlers_And_Logic
+
+        /// <summary>Loads hero by ID from the CSV and fills the UI.</summary>
         private void LoadHero()
         {
             int id;
@@ -237,7 +248,7 @@ namespace OneKickHeroesApp
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 btnSave.Enabled = false;
                 loadedId = -1;
-                SetValues("", "", "", "", "");
+                SetValues("—", "—", "—", "—", "—");
                 return;
             }
 
@@ -252,17 +263,7 @@ namespace OneKickHeroesApp
             btnSave.Enabled = true;
         }
 
-        private void SetValues(string name, string age, string power, string score, string rank)
-        {
-            vName.Text = string.IsNullOrEmpty(name) ? "—" : name;
-            vAge.Text = string.IsNullOrEmpty(age) ? "—" : age;
-            vPower.Text = string.IsNullOrEmpty(power) ? "—" : power;
-            vScore.Text = string.IsNullOrEmpty(score) ? "—" : score;
-
-            vRank.Text = string.IsNullOrEmpty(rank) ? "—" : (rank.ToUpperInvariant() == "S" ? "S-Rank" : rank + "-Rank");
-            vRank.ForeColor = rank == "S" ? Theme.Success : Theme.Text;
-        }
-
+        /// <summary>Saves the currently loaded hero summary to /Data/hero_####_summary.txt</summary>
         private void SaveSummary()
         {
             if (loadedId < 0)
@@ -303,7 +304,28 @@ namespace OneKickHeroesApp
             }
         }
 
-        // ---- Helpers ----
+        /// <summary>Helper to push values to UI labels.</summary>
+        private void SetValues(string name, string age, string power, string score, string rank)
+        {
+            vName.Text = string.IsNullOrEmpty(name) ? "—" : name;
+            vAge.Text = string.IsNullOrEmpty(age) ? "—" : age;
+            vPower.Text = string.IsNullOrEmpty(power) ? "—" : power;
+            vScore.Text = string.IsNullOrEmpty(score) ? "—" : score;
+
+            var r = (rank ?? "").Trim().ToUpperInvariant();
+            vRank.Text = string.IsNullOrEmpty(r) ? "—" : (r == "S" ? "S-Rank" : r + "-Rank");
+            vRank.ForeColor = r == "S" ? Theme.Success : Theme.Text;
+        }
+
+        #endregion
+        // ================= END EVENT/LOGIC SECTION ============
+
+
+        // ======================================================
+        // =====================  HELPERS  ======================
+        // ======================================================
+        #region Helpers
+
         private static string EnsureCsv()
         {
             string dataDir = Path.Combine(Application.StartupPath, "Data");
@@ -335,5 +357,8 @@ namespace OneKickHeroesApp
                 value = value.Substring(1, value.Length - 2).Replace("\"\"", "\"");
             return value;
         }
+
+        #endregion
+        // ===================== END HELPERS ====================
     }
 }
