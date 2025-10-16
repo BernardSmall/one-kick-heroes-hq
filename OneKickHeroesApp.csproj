@@ -46,6 +46,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Domain\Hero.cs" />
+    <Compile Include="Domain\Rank.cs" />
+    <Compile Include="Domain\RankRules.cs" />
+    <Compile Include="Domain\ThreatLevel.cs" />
     <Compile Include="Presentation\Forms\FormHome.cs">
       <SubType>Form</SubType>
     </Compile>
