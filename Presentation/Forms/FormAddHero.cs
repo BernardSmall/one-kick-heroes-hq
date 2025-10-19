@@ -26,13 +26,14 @@ namespace OneKickHeroesApp
             public static Font Body{ get { return new Font("Segoe UI", 10, FontStyle.Regular); } }
         }
 
-        // Inputs (ID auto)
+        // Inputs
+        private TextBox txtHeroId;
         private TextBox txtName;
         private TextBox txtAge;
         private TextBox txtPower;
         private TextBox txtScore;
-        private ComboBox cboRank;   // NEW: choose S/A/B/C or Auto
         private Button btnAdd;
+        private Button btnBack;
 
         public FormAddHero()
         {
@@ -131,6 +132,18 @@ namespace OneKickHeroesApp
                 return tb;
             };
 
+            // Hero ID
+            var lblHeroId = mkLabel("Hero ID");
+            card.Controls.Add(lblHeroId);
+            txtHeroId = mkInput();
+            txtHeroId.MaxLength = 4;
+            txtHeroId.KeyPress += delegate (object sender, KeyPressEventArgs e)
+            {
+                if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar)) e.Handled = true;
+            };
+            card.Controls.Add(txtHeroId);
+            y = txtHeroId.Bottom + gap;
+
             // Name
             var lblName = mkLabel("Name");
             card.Controls.Add(lblName);
@@ -171,32 +184,8 @@ namespace OneKickHeroesApp
             card.Controls.Add(txtScore);
             y = txtScore.Bottom + gap;
 
-            // Rank dropdown (NEW)
-            var lblRank = mkLabel("Rank");
-            card.Controls.Add(lblRank);
+            // Buttons row
 
-            cboRank = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = Theme.Body,
-                BackColor = Color.FromArgb(22, 27, 34),
-                ForeColor = Theme.Text,
-                FlatStyle = FlatStyle.Popup,
-                Width = card.Width - 80,
-                Location = new Point(12, y + 32),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-            // First item indicates auto-compute
-            cboRank.Items.Add("Auto (from score)");
-            cboRank.Items.Add("S");
-            cboRank.Items.Add("A");
-            cboRank.Items.Add("B");
-            cboRank.Items.Add("C");
-            cboRank.SelectedIndex = 0;
-            card.Controls.Add(cboRank);
-            y = cboRank.Bottom + 26;
-
-            // Add button
             btnAdd = new Button
             {
                 Text = "Add Superhero",
@@ -205,12 +194,28 @@ namespace OneKickHeroesApp
                 BackColor = Theme.Accent,
                 FlatStyle = FlatStyle.Flat,
                 Height = 44,
-                Width = 220,
+                Width = 180,
                 Location = new Point(12, y)
             };
             btnAdd.FlatAppearance.BorderSize = 0;
             btnAdd.Click += OnAddClicked;
             card.Controls.Add(btnAdd);
+
+            btnBack = new Button
+            {
+                Text = "\u2190 Back",
+                Font = Theme.Body,
+                ForeColor = Theme.Text,
+                BackColor = Color.FromArgb(22, 27, 34),
+                FlatStyle = FlatStyle.Flat,
+                Height = 44,
+                Width = 120,
+                Location = new Point(btnAdd.Right + 12, y)
+            };
+            btnBack.FlatAppearance.BorderSize = 1;
+            btnBack.FlatAppearance.BorderColor = Theme.Border;
+            btnBack.Click += (s,e)=> { var home = new FormHome(); home.Show(); this.Hide(); };
+            card.Controls.Add(btnBack);
 
             AcceptButton = btnAdd;
 
@@ -222,13 +227,19 @@ namespace OneKickHeroesApp
                     var tb = c as TextBox;
                     if (tb != null) tb.Width = card.Width - 80;
                 }
-                cboRank.Width = card.Width - 80;
             };
         }
 
         private void OnAddClicked(object sender, EventArgs e)
         {
             // Validate
+            string heroIdText = (txtHeroId.Text ?? "").Trim();
+            int heroId;
+            if (!int.TryParse(heroIdText, out heroId) || heroId < 1000 || heroId > 9999)
+            {
+                MessageBox.Show("Hero ID must be a 4-digit number (1000-9999).", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtHeroId.Focus(); return;
+            }
             string name  = (txtName.Text  ?? "").Trim();
             string power = (txtPower.Text ?? "").Trim();
 
@@ -253,29 +264,36 @@ namespace OneKickHeroesApp
                 txtScore.Focus(); return;
             }
 
-            // Rank: chosen from dropdown or auto
-            string rank = cboRank.SelectedIndex > 0 ? (string)cboRank.SelectedItem : CalculateRank(score);
+            // Rank auto-generated and corresponding threat level
+            string rank = CalculateRank(score);
+            string threat = CalculateThreat(rank);
 
             try
             {
                 string dataDir = Path.Combine(Application.StartupPath, "Data");
                 Directory.CreateDirectory(dataDir);
-                string file = Path.Combine(dataDir, "heroes.csv");
+                string file = Path.Combine(dataDir, "superheroes.txt");
 
                 if (!File.Exists(file))
-                    File.WriteAllText(file, "Id,Name,Age,Power,Score,Rank" + Environment.NewLine);
-
-                int nextId = GetNextId(file);
+                {
+                    using (var writer = new StreamWriter(file))
+                    {
+                        writer.WriteLine("Id|Name|Age|Power|Score|Rank|ThreatLevel");
+                    }
+                }
 
                 string line = string.Format(CultureInfo.InvariantCulture,
-                    "{0},{1},{2},{3},{4},{5}",
-                    nextId, EscapeCsv(name), age, EscapeCsv(power), score, rank);
+                    "{0}|{1}|{2}|{3}|{4}|{5}|{6}",
+                    heroId, name, age, power, score, rank, threat);
 
-                File.AppendAllText(file, line + Environment.NewLine);
+                using (var writer = new StreamWriter(file, true))
+                {
+                    writer.WriteLine(line);
+                }
 
                 MessageBox.Show(
                     "Superhero added successfully!" + Environment.NewLine +
-                    "Assigned ID: " + nextId + Environment.NewLine +
+                    "Hero ID: " + heroId + Environment.NewLine +
                     "Rank: " + rank,
                     "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -288,54 +306,33 @@ namespace OneKickHeroesApp
             }
         }
 
-        private int GetNextId(string file)
-        {
-            try
-            {
-                var ids = File.ReadAllLines(file)
-                              .Skip(1)
-                              .Select(l => l.Split(','))
-                              .Where(parts => parts.Length > 0)
-                              .Select(parts =>
-                              {
-                                  int v;
-                                  return int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out v) ? (int?)v : null;
-                              })
-                              .Where(v => v.HasValue)
-                              .Select(v => v.Value);
-
-                return ids.Any() ? ids.Max() + 1 : 1;
-            }
-            catch
-            {
-                return (int)(DateTime.UtcNow.Ticks % int.MaxValue);
-            }
-        }
-
         private string CalculateRank(double s)
         {
-            if (s >= 85) return "S";
-            if (s >= 75) return "A";
-            if (s >= 60) return "B";
+            if (s >= 81) return "S";
+            if (s >= 61) return "A";
+            if (s >= 41) return "B";
             return "C";
         }
 
-        private static string EscapeCsv(string value)
+        private string CalculateThreat(string rank)
         {
-            if (value == null) return "";
-            bool needQuotes = value.Contains(",") || value.Contains("\"") || value.Contains("\n");
-            string v = value.Replace("\"", "\"\"");
-            return needQuotes ? "\"" + v + "\"" : v;
+            switch ((rank ?? "").ToUpperInvariant())
+            {
+                case "S": return "FinalsWeek";
+                case "A": return "MidtermMadness";
+                case "B": return "GroupProjectGoneWrong";
+                default: return "PopQuiz";
+            }
         }
 
         private void ClearForm()
         {
+            txtHeroId.Text = "";
             txtName.Text = "";
             txtAge.Text = "";
             txtPower.Text = "";
             txtScore.Text = "";
-            cboRank.SelectedIndex = 0; // back to Auto
-            txtName.Focus();
+            txtHeroId.Focus();
         }
 
         private void FormAddHero_Load(object sender, EventArgs e)

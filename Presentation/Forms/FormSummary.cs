@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using OneKickHeroesApp.Data;
 
 namespace OneKickHeroesApp
 {
@@ -31,6 +32,7 @@ namespace OneKickHeroesApp
         private Label statAvgScore;
         private ListView rankList;
         private Button btnSave;
+        private Button btnBack;
         private Label banner;
 
         private int total = 0;
@@ -41,9 +43,13 @@ namespace OneKickHeroesApp
             {"S",0}, {"A",0}, {"B",0}, {"C",0}
         };
 
+        // Services
+        private readonly HeroService _heroService;
+
         public FormSummary()
         {
             InitializeComponent();
+            _heroService = new HeroService();
             BuildUI();
             ComputeAndRender();
         }
@@ -148,7 +154,7 @@ namespace OneKickHeroesApp
             rankList.Columns.Add("Total", 100, HorizontalAlignment.Left);
             rankCard.Controls.Add(rankList);
 
-            // Save button
+            // Buttons
             btnSave = new Button
             {
                 Text = "Save to summary.txt",
@@ -157,13 +163,30 @@ namespace OneKickHeroesApp
                 BackColor = Theme.Accent,
                 FlatStyle = FlatStyle.Flat,
                 Height = 44,
-                Width = 260,
+                Width = 200,
                 Location = new Point(rankCard.Right + 40, rankCard.Bottom - 44)
             };
             btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             btnSave.Click += OnSaveClicked;
             Controls.Add(btnSave);
+
+            btnBack = new Button
+            {
+                Text = "← Back to Home",
+                Font = Theme.Body,
+                ForeColor = Theme.Text,
+                BackColor = Color.FromArgb(22, 27, 34),
+                FlatStyle = FlatStyle.Flat,
+                Height = 44,
+                Width = 140,
+                Location = new Point(btnSave.Right + 20, rankCard.Bottom - 44)
+            };
+            btnBack.FlatAppearance.BorderSize = 1;
+            btnBack.FlatAppearance.BorderColor = Theme.Border;
+            btnBack.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnBack.Click += OnBackClicked;
+            Controls.Add(btnBack);
 
             // Success banner
             banner = new Label
@@ -194,56 +217,52 @@ namespace OneKickHeroesApp
                 rankList.Size = new Size(rankCard.Width - 16, rankCard.Height - 50);
 
                 btnSave.Location = new Point(rankCard.Right + 40, rankCard.Bottom - 44);
+                btnBack.Location = new Point(btnSave.Right + 20, rankCard.Bottom - 44);
                 banner.Location = new Point(btnSave.Left - 20, btnSave.Top - 60);
             };
         }
 
         // ---------- Data & computations ----------
-        private string EnsureCsv()
-        {
-            string dataDir = Path.Combine(Application.StartupPath, "Data");
-            Directory.CreateDirectory(dataDir);
-            string file = Path.Combine(dataDir, "heroes.csv");
-            if (!File.Exists(file))
-                File.WriteAllText(file, "Id,Name,Age,Power,Score,Rank" + Environment.NewLine);
-            return file;
-        }
-
         private void ComputeAndRender()
         {
-            string file = EnsureCsv();
-            var rows = File.ReadAllLines(file)
-                           .Skip(1)
-                           .Select(l => l.Split(','))
-                           .Where(p => p.Length >= 6)
-                           .Select(p => new
-                           {
-                               Age = SafeInt(p[2]),
-                               Score = SafeDouble(p[4]),
-                               Rank = (p[5] ?? "").Trim().ToUpperInvariant()
-                           })
-                           .ToList();
+            try
+            {
+                // Get all heroes using HeroService
+                var heroes = _heroService.GetAllHeroes();
 
-            total = rows.Count;
-            avgAge = rows.Count > 0 ? rows.Average(r => r.Age) : 0;
-            avgScore = rows.Count > 0 ? rows.Average(r => r.Score) : 0;
+                total = heroes.Count;
+                avgAge = heroes.Count > 0 ? heroes.Average(h => h.Age) : 0;
+                avgScore = heroes.Count > 0 ? heroes.Average(h => h.Score) : 0;
 
-            // reset counts
-            rankCounts["S"] = rows.Count(r => r.Rank == "S");
-            rankCounts["A"] = rows.Count(r => r.Rank == "A");
-            rankCounts["B"] = rows.Count(r => r.Rank == "B");
-            rankCounts["C"] = rows.Count(r => r.Rank == "C");
+                // Reset rank counts
+                rankCounts["S"] = heroes.Count(h => h.Rank == Rank.S);
+                rankCounts["A"] = heroes.Count(h => h.Rank == Rank.A);
+                rankCounts["B"] = heroes.Count(h => h.Rank == Rank.B);
+                rankCounts["C"] = heroes.Count(h => h.Rank == Rank.C);
 
-            // render
-            statTotal.Text = total.ToString(CultureInfo.CurrentCulture);
-            statAvgAge.Text = avgAge.ToString("0.#", CultureInfo.CurrentCulture);
-            statAvgScore.Text = avgScore.ToString("0.#", CultureInfo.CurrentCulture);
+                // Render statistics
+                statTotal.Text = total.ToString(CultureInfo.CurrentCulture);
+                statAvgAge.Text = avgAge.ToString("0.#", CultureInfo.CurrentCulture);
+                statAvgScore.Text = avgScore.ToString("0.#", CultureInfo.CurrentCulture);
 
-            rankList.Items.Clear();
-            AddRankRow("S");
-            AddRankRow("A");
-            AddRankRow("B");
-            AddRankRow("C");
+                // Update rank list
+                rankList.Items.Clear();
+                AddRankRow("S");
+                AddRankRow("A");
+                AddRankRow("B");
+                AddRankRow("C");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to load hero data.\n" + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                
+                // Set default values
+                statTotal.Text = "0";
+                statAvgAge.Text = "0";
+                statAvgScore.Text = "0";
+                rankList.Items.Clear();
+            }
         }
 
         private void AddRankRow(string r)
@@ -290,14 +309,15 @@ namespace OneKickHeroesApp
             }
         }
 
-        // ---------- Helpers ----------
-        private static int SafeInt(string s)
+        /// <summary>
+        /// Handles the back button click
+        /// </summary>
+        private void OnBackClicked(object sender, EventArgs e)
         {
-            int v; return int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out v) ? v : 0;
-        }
-        private static double SafeDouble(string s)
-        {
-            double v; return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v) ? v : 0.0;
+            // Return to home form
+            var homeForm = new FormHome();
+            homeForm.Show();
+            this.Hide();
         }
 
         private void FormSummary_Load(object sender, EventArgs e)

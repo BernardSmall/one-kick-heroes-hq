@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace OneKickHeroesApp.Domain
+namespace OneKickHeroesApp.Data
 {
     public static class RankRules
     {
@@ -29,3 +23,5 @@ namespace OneKickHeroesApp.Domain
         }
     }
 }
+
+

@@ -46,10 +46,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Domain\Hero.cs" />
-    <Compile Include="Domain\Rank.cs" />
-    <Compile Include="Domain\RankRules.cs" />
-    <Compile Include="Domain\ThreatLevel.cs" />
+    <Compile Include="Data\Hero.cs" />
+    <Compile Include="Data\HeroService.cs" />
+    <Compile Include="Data\Rank.cs" />
+    <Compile Include="Data\RankRules.cs" />
+    <Compile Include="Data\ThreatLevel.cs" />
     <Compile Include="Presentation\Forms\FormHome.cs">
       <SubType>Form</SubType>
     </Compile>

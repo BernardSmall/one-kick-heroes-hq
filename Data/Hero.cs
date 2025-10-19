@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 
-namespace OneKickHeroesApp.Domain
+namespace OneKickHeroesApp.Data
 {
-    internal class Hero
+    public class Hero
     {
-       
-
         public int Id { get; }
         public string Name { get; }
         public int Age { get; }
@@ -27,3 +21,5 @@ namespace OneKickHeroesApp.Domain
             => new Hero(id ?? Id, name ?? Name, age ?? Age, power ?? Power, score ?? Score, rank ?? Rank, threat ?? Threat);
     }
 }
+
+
