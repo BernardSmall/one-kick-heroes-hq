@@ -1,4 +1,5 @@
-﻿using System;
+﻿// UpdateHero.cs
+using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -61,6 +62,8 @@ namespace OneKickHeroesApp
             }
 
             string file = EnsureCsv();
+            
+            
             var rec = File.ReadAllLines(file)
                           .Skip(1)
                           .Select(l => l.Split(','))

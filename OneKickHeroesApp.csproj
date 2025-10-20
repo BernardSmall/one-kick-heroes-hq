@@ -147,5 +147,8 @@
     <Folder Include="Business\" />
     <Folder Include="Data\" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="superheroes.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

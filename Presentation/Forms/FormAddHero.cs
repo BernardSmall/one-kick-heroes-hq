@@ -92,9 +92,8 @@ namespace OneKickHeroesApp
 
             try
             {
-                string dataDir = Path.Combine(Application.StartupPath, "Data");
-                Directory.CreateDirectory(dataDir);
-                string file = Path.Combine(dataDir, "heroes.csv");
+                // Save to superheroes.txt in main project folder
+                string file = Path.Combine(Application.StartupPath, @"..\..\superheroes.txt");
 
                 if (!File.Exists(file))
                     File.WriteAllText(file, "Id,Name,Age,Power,Score,Rank" + Environment.NewLine);
@@ -175,3 +174,4 @@ namespace OneKickHeroesApp
         }
     }
 }
+
