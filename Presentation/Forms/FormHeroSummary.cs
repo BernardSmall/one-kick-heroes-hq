@@ -5,6 +5,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using OneKickHeroesApp.Data;
+using System.Collections.Generic;
 
 namespace OneKickHeroesApp
 {
@@ -29,17 +31,20 @@ namespace OneKickHeroesApp
 
         // ------------- UI CONTROLS (fields so logic can use them) -------------
         private Panel card;
-        private TextBox txtId;
+        private ComboBox cboId;
         private Button btnLoad, btnSave;
         private Label vName, vAge, vPower, vScore, vRank;
 
         // ------------- STATE -------------
         private int loadedId = -1;
+        private HeroService _heroService;
 
         public FormHeroSummary()
         {
             InitializeComponent();  // minimal designer; UI built in BuildUI()
+            _heroService = new HeroService();
             BuildUI();              // <--- ALL UI lives here
+            LoadIds();
         }
 
         // ======================================================
@@ -105,18 +110,17 @@ namespace OneKickHeroesApp
             };
             card.Controls.Add(lblId);
 
-            txtId = new TextBox
+            cboId = new ComboBox
             {
                 Font = Theme.Body,
                 BackColor = Color.FromArgb(22, 27, 34),
                 ForeColor = Theme.Text,
-                BorderStyle = BorderStyle.FixedSingle,
+                DropDownStyle = ComboBoxStyle.DropDownList,
                 Location = new Point(12, 44),
-                Width = card.Width - 12 - 280,   // space for 2 buttons
+                Width = card.Width - 12 - 280,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
-            txtId.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { LoadHero(); e.SuppressKeyPress = true; } };
-            card.Controls.Add(txtId);
+            card.Controls.Add(cboId);
 
             btnLoad = new Button
             {
@@ -125,9 +129,9 @@ namespace OneKickHeroesApp
                 ForeColor = Color.White,
                 BackColor = Theme.Accent,
                 FlatStyle = FlatStyle.Flat,
-                Height = txtId.Height + 4,
+                Height = cboId.Height + 4,
                 Width = 100,
-                Location = new Point(txtId.Right + 12, txtId.Top - 2),
+                Location = new Point(cboId.Right + 12, cboId.Top - 2),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             btnLoad.FlatAppearance.BorderSize = 0;
@@ -141,9 +145,9 @@ namespace OneKickHeroesApp
                 ForeColor = Color.White,
                 BackColor = Theme.Accent,
                 FlatStyle = FlatStyle.Flat,
-                Height = txtId.Height + 4,
+                Height = cboId.Height + 4,
                 Width = 170,
-                Location = new Point(btnLoad.Right + 12, txtId.Top - 2),
+                Location = new Point(btnLoad.Right + 12, cboId.Top - 2),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 Enabled = false
             };
@@ -203,8 +207,8 @@ namespace OneKickHeroesApp
             // Keep things aligned when resizing
             card.SizeChanged += (s, e) =>
             {
-                txtId.Width = card.Width - 12 - 280;
-                btnLoad.Left = txtId.Right + 12;
+                cboId.Width = card.Width - 12 - 280;
+                btnLoad.Left = cboId.Right + 12;
                 btnSave.Left = btnLoad.Right + 12;
 
                 sep.Width = card.Width - 24;
@@ -225,24 +229,18 @@ namespace OneKickHeroesApp
         // ======================================================
         #region EventHandlers_And_Logic
 
-        /// <summary>Loads hero by ID from the CSV and fills the UI.</summary>
+        /// <summary>Loads hero by selected ID and fills the UI.</summary>
         private void LoadHero()
         {
-            int id;
-            if (!TryParseId(txtId.Text, out id))
+            if (cboId.SelectedItem == null)
             {
-                MessageBox.Show("Enter a valid Hero ID (e.g., 128 or H-0128).",
-                    "Invalid ID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtId.Focus(); return;
+                MessageBox.Show("Select a Hero ID.", "Missing ID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cboId.Focus(); return;
             }
+            int id = (int)((KeyValuePair<int, string>)cboId.SelectedItem).Key;
 
-            string file = EnsureCsv();
-            var rec = File.ReadAllLines(file)
-                          .Skip(1)
-                          .Select(l => l.Split(','))
-                          .FirstOrDefault(p => p.Length >= 6 && SafeInt(p[0]) == id);
-
-            if (rec == null)
+            var hero = _heroService.GetAllHeroes().FirstOrDefault(h => h.Id == id);
+            if (hero == null)
             {
                 MessageBox.Show("Hero not found.", "Not found",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -253,13 +251,8 @@ namespace OneKickHeroesApp
             }
 
             loadedId = id;
-            string name = UnescapeCsv(rec[1]);
-            string age = rec[2];
-            string power = UnescapeCsv(rec[3]);
-            string score = rec[4];
-            string rank = rec[5];
-
-            SetValues(name, age, power, score, rank);
+            SetValues(hero.Name, hero.Age.ToString(CultureInfo.CurrentCulture), hero.Power,
+                hero.Score.ToString("0.#", CultureInfo.CurrentCulture), hero.Rank);
             btnSave.Enabled = true;
         }
 
@@ -326,36 +319,32 @@ namespace OneKickHeroesApp
         // ======================================================
         #region Helpers
 
-        private static string EnsureCsv()
+        private void LoadIds()
         {
-            string dataDir = Path.Combine(Application.StartupPath, "Data");
-            Directory.CreateDirectory(dataDir);
-            string file = Path.Combine(dataDir, "heroes.csv");
-            if (!File.Exists(file))
-                File.WriteAllText(file, "Id,Name,Age,Power,Score,Rank" + Environment.NewLine);
-            return file;
-        }
-
-        private static bool TryParseId(string raw, out int id)
-        {
-            id = 0;
-            if (string.IsNullOrWhiteSpace(raw)) return false;
-            string digits = new string(raw.Where(char.IsDigit).ToArray());
-            return int.TryParse(digits, NumberStyles.Integer, CultureInfo.InvariantCulture, out id);
-        }
-
-        private static int SafeInt(string s)
-        {
-            int v; return int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out v) ? v : -1;
-        }
-
-        private static string UnescapeCsv(string value)
-        {
-            if (string.IsNullOrEmpty(value)) return "";
-            value = value.Trim();
-            if (value.StartsWith("\"") && value.EndsWith("\""))
-                value = value.Substring(1, value.Length - 2).Replace("\"\"", "\"");
-            return value;
+            try
+            {
+                var heroes = _heroService.GetAllHeroes()
+                    .Where(h => h != null && h.IsValid())
+                    .OrderBy(h => h.Id)
+                    .Select(h => new KeyValuePair<int, string>(h.Id, $"{h.Id} - {h.Name}"))
+                    .ToList();
+                
+                if (heroes.Count == 0)
+                {
+                    MessageBox.Show("No valid heroes found in the data file.", "No Data", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                
+                cboId.DataSource = heroes;
+                cboId.DisplayMember = "Value";
+                cboId.ValueMember = "Key";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to load hero IDs.\n" + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         #endregion
