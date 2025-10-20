@@ -35,6 +35,7 @@ namespace OneKickHeroesApp
         private ListView rankList;
         private Button btnSave;
         private Button btnRefresh;
+        private Button btnBack;
         private Label banner;
 
         private HeroService _heroService;
@@ -199,6 +200,24 @@ namespace OneKickHeroesApp
             btnRefresh.Click += (s,e) => ComputeAndRender();
             Controls.Add(btnRefresh);
 
+            // Back button
+            btnBack = new Button
+            {
+                Text = "\u2190 Back to Home",
+                Font = Theme.Body,
+                ForeColor = Theme.Text,
+                BackColor = Color.FromArgb(22, 27, 34),
+                FlatStyle = FlatStyle.Flat,
+                Height = 44,
+                Width = 150,
+                Location = new Point(btnRefresh.Right + 16, rankCard.Bottom - 44)
+            };
+            btnBack.FlatAppearance.BorderSize = 1;
+            btnBack.FlatAppearance.BorderColor = Theme.Border;
+            btnBack.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnBack.Click += (s, e) => { var home = new FormHome(); home.Show(); this.Hide(); };
+            Controls.Add(btnBack);
+
             // Success banner
             banner = new Label
             {
@@ -229,6 +248,7 @@ namespace OneKickHeroesApp
 
                 btnSave.Location = new Point(rankCard.Right + 40, rankCard.Bottom - 44);
                 btnRefresh.Location = new Point(btnSave.Right + 16, rankCard.Bottom - 44);
+                btnBack.Location = new Point(btnRefresh.Right + 16, rankCard.Bottom - 44);
                 banner.Location = new Point(btnSave.Left - 20, btnSave.Top - 60);
             };
         }
@@ -244,10 +264,10 @@ namespace OneKickHeroesApp
             avgScore = heroes.Count > 0 ? heroes.Average(h => h.Score) : 0;
 
             // reset counts
-            var sCount = heroes.Count(h => h.Rank == "S");
-            var aCount = heroes.Count(h => h.Rank == "A");
-            var bCount = heroes.Count(h => h.Rank == "B");
-            var cCount = heroes.Count(h => h.Rank == "C");
+            var sCount = heroes.Count(h => (h.Rank ?? "").Equals("S", StringComparison.OrdinalIgnoreCase));
+            var aCount = heroes.Count(h => (h.Rank ?? "").Equals("A", StringComparison.OrdinalIgnoreCase));
+            var bCount = heroes.Count(h => (h.Rank ?? "").Equals("B", StringComparison.OrdinalIgnoreCase));
+            var cCount = heroes.Count(h => (h.Rank ?? "").Equals("C", StringComparison.OrdinalIgnoreCase));
             rankCounts["S"] = sCount;
             rankCounts["A"] = aCount;
             rankCounts["B"] = bCount;
@@ -324,7 +344,13 @@ namespace OneKickHeroesApp
                 lines.Add("  B: " + rankCounts["B"].ToString(CultureInfo.CurrentCulture));
                 lines.Add("  C: " + rankCounts["C"].ToString(CultureInfo.CurrentCulture));
 
-                File.WriteAllLines(path, lines.ToArray());
+                using (var writer = new StreamWriter(path))
+                {
+                    foreach (var ln in lines)
+                    {
+                        writer.WriteLine(ln);
+                    }
+                }
                 banner.Text = "✓  Summary saved to summary.txt";
                 banner.Visible = true;
             }
