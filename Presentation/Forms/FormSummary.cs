@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
+using OneKickHeroesApp.Data;
 
 namespace OneKickHeroesApp
 {
@@ -38,17 +39,6 @@ namespace OneKickHeroesApp
         {
             banner.Visible = false;
             ComputeAndRender();
-        }
-
-        // ---------- Data & computations ----------
-        private string EnsureCsv()
-        {
-            string dataDir = Path.Combine(Application.StartupPath, "Data");
-            Directory.CreateDirectory(dataDir);
-            string file = Path.Combine(dataDir, "heroes.csv");
-            if (!File.Exists(file))
-                File.WriteAllText(file, "Id,Name,Age,Power,Score,Rank" + Environment.NewLine);
-            return file;
         }
 
         private void ComputeAndRender()
@@ -105,6 +95,17 @@ namespace OneKickHeroesApp
             rankList.Items.Add(item);
         }
 
+        private void AddRankRowWithPercent(string r, int count, int totalCount)
+        {
+            string pct = totalCount > 0 ? (" (" + (count * 100.0 / totalCount).ToString("0.#", CultureInfo.CurrentCulture) + "%)") : "";
+            var item = new ListViewItem(new[]
+            {
+                r,
+                count.ToString(CultureInfo.CurrentCulture) + pct
+            });
+            rankList.Items.Add(item);
+        }
+
         private void OnSaveClicked(object sender, EventArgs e)
         {
             try
@@ -128,7 +129,13 @@ namespace OneKickHeroesApp
                 lines.Add("  B: " + rankCounts["B"].ToString(CultureInfo.CurrentCulture));
                 lines.Add("  C: " + rankCounts["C"].ToString(CultureInfo.CurrentCulture));
 
-                File.WriteAllLines(path, lines.ToArray());
+                using (var writer = new StreamWriter(path))
+                {
+                    foreach (var ln in lines)
+                    {
+                        writer.WriteLine(ln);
+                    }
+                }
                 banner.Text = "✓  Summary saved to summary.txt";
                 banner.Visible = true;
             }
@@ -140,11 +147,12 @@ namespace OneKickHeroesApp
         }
 
         // ---------- Helpers ----------
-        private static int SafeInt(string s)
+        private void EnableAutoRefresh()
         {
             return int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) ? v : 0;
         }
-        private static double SafeDouble(string s)
+
+        private void FormSummary_Load(object sender, EventArgs e)
         {
             return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double v) ? v : 0.0;
         }
