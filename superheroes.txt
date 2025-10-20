@@ -3,3 +3,6 @@
 3,Hulk,40,Super Strength,65,B
 4,Captain Marvel,30,Energy Absorption,92,S
 5,Thor,100,Lightning God,95,S
+6,spider man,20,web slinging,85,S
+7,siphiwe,19,lighting,75,A
+8,SInoh,25,Ant Women,95,S

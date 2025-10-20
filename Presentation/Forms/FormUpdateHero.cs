@@ -207,9 +207,7 @@ namespace OneKickHeroesApp
 
         private static string EnsureCsv()
         {
-            string dataDir = Path.Combine(Application.StartupPath, "Data");
-            Directory.CreateDirectory(dataDir);
-            string file = Path.Combine(dataDir, "heroes.csv");
+            string file = Path.Combine(Application.StartupPath, @"..\..\superheroes.txt");
             if (!File.Exists(file))
                 File.WriteAllText(file, "Id,Name,Age,Power,Score,Rank" + Environment.NewLine);
             return file;

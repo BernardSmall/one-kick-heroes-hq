@@ -1,4 +1,4 @@
-﻿//DeleteHero.cs
+﻿// DeleteHero.cs
 
 using System;
 using System.Collections.Generic;
@@ -42,9 +42,7 @@ namespace OneKickHeroesApp
         // ---------- Data ----------
         private string EnsureCsv()
         {
-            string dataDir = Path.Combine(Application.StartupPath, "Data");
-            Directory.CreateDirectory(dataDir);
-            string file = Path.Combine(dataDir, "heroes.csv");
+            string file = Path.Combine(Application.StartupPath, @"..\..\superheroes.txt");
             if (!File.Exists(file))
                 File.WriteAllText(file, "Id,Name,Age,Power,Score,Rank" + Environment.NewLine);
             return file;
@@ -62,7 +60,7 @@ namespace OneKickHeroesApp
                            .Select(p => new
                            {
                                IdRaw = SafeInt(p[0]),
-                               IdDisp = FormatId(SafeInt(p[0])),
+                               IdDisp = SafeInt(p[0]).ToString(), // numeric ID display
                                Name = UnescapeCsv(p[1]),
                                Age = p[2],
                                Power = UnescapeCsv(p[3]),
@@ -144,11 +142,6 @@ namespace OneKickHeroesApp
             if (value.StartsWith("\"") && value.EndsWith("\""))
                 value = value.Substring(1, value.Length - 2).Replace("\"\"", "\"");
             return value;
-        }
-
-        private static string FormatId(int id)
-        {
-            return id < 0 ? "" : "H-" + id.ToString("0000", CultureInfo.InvariantCulture);
         }
     }
 }
