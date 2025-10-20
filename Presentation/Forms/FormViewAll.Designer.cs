@@ -30,18 +30,42 @@
         {
             this.SuspendLayout();
             // 
-            // FormViewAll
+            // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Name = "FormViewAll";
-            this.Text = "FormViewAll";
-            this.Load += new System.EventHandler(this.FormViewAll_Load);
+            this.ClientSize = new System.Drawing.Size(583, 385);
+            this.Name = "Form1";
+            this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
 
         }
 
         #endregion
+
+        private System.Windows.Forms.DataGridView dataGridView1;
+        private System.Windows.Forms.BindingNavigator bindingNavigator1;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorAddNewItem;
+        private System.Windows.Forms.ToolStripLabel bindingNavigatorCountItem;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorDeleteItem;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorMoveFirstItem;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorMovePreviousItem;
+        private System.Windows.Forms.ToolStripSeparator bindingNavigatorSeparator;
+        private System.Windows.Forms.ToolStripTextBox bindingNavigatorPositionItem;
+        private System.Windows.Forms.ToolStripSeparator bindingNavigatorSeparator1;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorMoveNextItem;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorMoveLastItem;
+        private System.Windows.Forms.ToolStripSeparator bindingNavigatorSeparator2;
+        private System.Windows.Forms.BindingNavigator bindingNavigator2;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorAddNewItem1;
+        private System.Windows.Forms.ToolStripLabel bindingNavigatorCountItem1;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorDeleteItem1;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorMoveFirstItem1;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorMovePreviousItem1;
+        private System.Windows.Forms.ToolStripSeparator bindingNavigatorSeparator3;
+        private System.Windows.Forms.ToolStripTextBox bindingNavigatorPositionItem1;
+        private System.Windows.Forms.ToolStripSeparator bindingNavigatorSeparator4;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorMoveNextItem1;
+        private System.Windows.Forms.ToolStripButton bindingNavigatorMoveLastItem1;
+        private System.Windows.Forms.ToolStripSeparator bindingNavigatorSeparator5;
+        private System.Windows.Forms.Button button1;
     }
 }

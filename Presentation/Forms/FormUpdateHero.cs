@@ -211,5 +211,10 @@ namespace OneKickHeroesApp
                 File.WriteAllText(file, "Id,Name,Age,Power,Score,Rank" + Environment.NewLine);
             return file;
         }
+
+        private void card_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
     }
 }
