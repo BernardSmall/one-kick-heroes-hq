@@ -129,19 +129,32 @@ namespace OneKickHeroesApp.Data
                 throw new ArgumentException("Data line cannot be empty.", nameof(dataLine));
 
             var parts = dataLine.Split('|');
+            // Accept 6 or 7 columns: Id|Name|Age|Power|Score|Rank|[ThreatLevel]
             if (parts.Length < 6)
-                throw new ArgumentException("Invalid data format. Expected: Id|Name|Age|Power|Score|Rank|ThreatLevel", nameof(dataLine));
+                throw new ArgumentException("Invalid data format.", nameof(dataLine));
 
-            if (!int.TryParse(parts[0].Trim(), out int id))
+            // Parse required fields with trimming
+            int id; if (!int.TryParse((parts[0] ?? "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out id))
                 throw new ArgumentException("Invalid Hero ID format.", nameof(dataLine));
 
-            if (!int.TryParse(parts[2].Trim(), out int age))
+            string name = (parts[1] ?? "").Trim();
+
+            int age; if (!int.TryParse((parts[2] ?? "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out age))
                 throw new ArgumentException("Invalid age format.", nameof(dataLine));
 
-            if (!double.TryParse(parts[4].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double score))
-                throw new ArgumentException("Invalid score format.", nameof(dataLine));
+            string power = (parts[3] ?? "").Trim();
 
-            return new Hero(id, parts[1].Trim(), age, parts[3].Trim(), score);
+            // Score may use comma or dot; normalize to dot, try invariant then current culture
+            string rawScore = (parts[4] ?? "").Trim();
+            string normalized = rawScore.Replace(',', '.');
+            double score;
+            if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out score))
+            {
+                if (!double.TryParse(rawScore, NumberStyles.Float, CultureInfo.CurrentCulture, out score))
+                    throw new ArgumentException("Invalid score format.", nameof(dataLine));
+            }
+
+            return new Hero(id, name, age, power, score);
         }
 
         /// <summary>
