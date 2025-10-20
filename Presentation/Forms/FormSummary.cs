@@ -37,9 +37,12 @@ namespace OneKickHeroesApp
         private Button btnRefresh;
         private Button btnBack;
         private Label banner;
+        private Label lblUpdated;
 
         private HeroService _heroService;
         private FileSystemWatcher _watcher;
+        private Timer _debounceTimer;
+        private const string DataFileName = "superheroes.txt";
 
         private int total = 0;
         private double avgAge = 0;
@@ -106,9 +109,9 @@ namespace OneKickHeroesApp
             };
             Controls.Add(subtitle);
 
-            // Stat cards row
+            // Stat cards row (moved down to avoid clipping header/subtitle)
             var cardW = 260; var cardH = 180; var gap = 16; var left = 30;
-            var top = 92;
+            var top = 120;
 
             var cardTotal = MakeCard(cardW, cardH);
             cardTotal.Location = new Point(left, top);
@@ -164,6 +167,7 @@ namespace OneKickHeroesApp
             rankList.Columns.Add("Rank", 120, HorizontalAlignment.Left);
             rankList.Columns.Add("Total", 100, HorizontalAlignment.Left);
             rankCard.Controls.Add(rankList);
+            rankList.ColumnClick += OnRankColumnClick;
 
             // Save button
             btnSave = new Button
@@ -236,6 +240,17 @@ namespace OneKickHeroesApp
             banner.BorderStyle = BorderStyle.FixedSingle;
             Controls.Add(banner);
 
+            // Last updated label
+            lblUpdated = new Label
+            {
+                Text = "",
+                Font = Theme.Body,
+                ForeColor = Theme.Muted,
+                AutoSize = true,
+                Location = new Point(36, subtitle.Bottom + 6)
+            };
+            Controls.Add(lblUpdated);
+
             // Resize behavior
             this.Resize += delegate
             {
@@ -255,49 +270,58 @@ namespace OneKickHeroesApp
 
         private void ComputeAndRender()
         {
-            var heroes = new List<OneKickHeroesApp.Data.Hero>();
-            try { heroes = new OneKickHeroesApp.Data.HeroService().GetAllHeroes(); }
-            catch { heroes = new List<OneKickHeroesApp.Data.Hero>(); }
-
-            total = heroes.Count;
-            avgAge = heroes.Count > 0 ? heroes.Average(h => h.Age) : 0;
-            avgScore = heroes.Count > 0 ? heroes.Average(h => h.Score) : 0;
-
-            // reset counts
-            var sCount = heroes.Count(h => (h.Rank ?? "").Equals("S", StringComparison.OrdinalIgnoreCase));
-            var aCount = heroes.Count(h => (h.Rank ?? "").Equals("A", StringComparison.OrdinalIgnoreCase));
-            var bCount = heroes.Count(h => (h.Rank ?? "").Equals("B", StringComparison.OrdinalIgnoreCase));
-            var cCount = heroes.Count(h => (h.Rank ?? "").Equals("C", StringComparison.OrdinalIgnoreCase));
-            rankCounts["S"] = sCount;
-            rankCounts["A"] = aCount;
-            rankCounts["B"] = bCount;
-            rankCounts["C"] = cCount;
-
-            // min/max (compute scores first to avoid any ordering ambiguity)
-            Hero minHero = null;
-            Hero maxHero = null;
-            if (heroes.Count > 0)
+            try
             {
-                var minScore = heroes.Min(h => h.Score);
-                var maxScore = heroes.Max(h => h.Score);
-                minHero = heroes.FirstOrDefault(h => Math.Abs(h.Score - minScore) < 0.000001);
-                maxHero = heroes.FirstOrDefault(h => Math.Abs(h.Score - maxScore) < 0.000001);
+                var heroes = _heroService.GetAllHeroes();
+
+                total = heroes.Count;
+                avgAge = heroes.Count > 0 ? heroes.Average(h => h.Age) : 0;
+                avgScore = heroes.Count > 0 ? heroes.Average(h => h.Score) : 0;
+
+                // reset counts
+                var sCount = heroes.Count(h => (h.Rank ?? "").Equals("S", StringComparison.OrdinalIgnoreCase));
+                var aCount = heroes.Count(h => (h.Rank ?? "").Equals("A", StringComparison.OrdinalIgnoreCase));
+                var bCount = heroes.Count(h => (h.Rank ?? "").Equals("B", StringComparison.OrdinalIgnoreCase));
+                var cCount = heroes.Count(h => (h.Rank ?? "").Equals("C", StringComparison.OrdinalIgnoreCase));
+                rankCounts["S"] = sCount;
+                rankCounts["A"] = aCount;
+                rankCounts["B"] = bCount;
+                rankCounts["C"] = cCount;
+
+                // min/max
+                Hero minHero = null;
+                Hero maxHero = null;
+                if (heroes.Count > 0)
+                {
+                    var minScore = heroes.Min(h => h.Score);
+                    var maxScore = heroes.Max(h => h.Score);
+                    minHero = heroes.FirstOrDefault(h => Math.Abs(h.Score - minScore) < 0.000001);
+                    maxHero = heroes.FirstOrDefault(h => Math.Abs(h.Score - maxScore) < 0.000001);
+                }
+
+                // render
+                statTotal.Text = total.ToString(CultureInfo.CurrentCulture);
+                statAvgAge.Text = avgAge.ToString("0.#", CultureInfo.CurrentCulture);
+                statAvgScore.Text = avgScore.ToString("0.#", CultureInfo.CurrentCulture);
+                statMinScore.Text = minHero != null ?
+                    ("Min: " + minHero.Score.ToString("0.#", CultureInfo.CurrentCulture) + " (" + minHero.Id.ToString(CultureInfo.CurrentCulture) + ": " + minHero.Name + ")") : "Min: -";
+                statMaxScore.Text = maxHero != null ?
+                    ("Max: " + maxHero.Score.ToString("0.#", CultureInfo.CurrentCulture) + " (" + maxHero.Id.ToString(CultureInfo.CurrentCulture) + ": " + maxHero.Name + ")") : "Max: -";
+
+                rankList.Items.Clear();
+                AddRankRowWithPercent("S", sCount, total);
+                AddRankRowWithPercent("A", aCount, total);
+                AddRankRowWithPercent("B", bCount, total);
+                AddRankRowWithPercent("C", cCount, total);
+
+                lblUpdated.Text = "Last updated: " + DateTime.Now.ToString(CultureInfo.CurrentCulture);
+                banner.Visible = false;
             }
-
-            // render
-            statTotal.Text = total.ToString(CultureInfo.CurrentCulture);
-            statAvgAge.Text = avgAge.ToString("0.#", CultureInfo.CurrentCulture);
-            statAvgScore.Text = avgScore.ToString("0.#", CultureInfo.CurrentCulture);
-            statMinScore.Text = minHero != null ?
-                ("Min: " + minHero.Score.ToString("0.#", CultureInfo.CurrentCulture) + " (" + minHero.Id.ToString(CultureInfo.CurrentCulture) + ": " + minHero.Name + ")") : "Min: -";
-            statMaxScore.Text = maxHero != null ?
-                ("Max: " + maxHero.Score.ToString("0.#", CultureInfo.CurrentCulture) + " (" + maxHero.Id.ToString(CultureInfo.CurrentCulture) + ": " + maxHero.Name + ")") : "Max: -";
-
-            rankList.Items.Clear();
-            AddRankRowWithPercent("S", sCount, total);
-            AddRankRowWithPercent("A", aCount, total);
-            AddRankRowWithPercent("B", bCount, total);
-            AddRankRowWithPercent("C", cCount, total);
+            catch (Exception ex)
+            {
+                banner.Text = "⚠  Failed to compute summary: " + ex.Message;
+                banner.Visible = true;
+            }
         }
 
         private void AddRankRow(string r)
@@ -368,11 +392,22 @@ namespace OneKickHeroesApp
             {
                 string dir = Path.Combine(Application.StartupPath, "Data");
                 Directory.CreateDirectory(dir);
-                _watcher = new FileSystemWatcher(dir, "superheroes.txt");
+                _watcher = new FileSystemWatcher(dir, DataFileName);
                 _watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName;
-                _watcher.Changed += (s, e) => BeginInvoke((Action)ComputeAndRender);
-                _watcher.Created += (s, e) => BeginInvoke((Action)ComputeAndRender);
-                _watcher.Renamed += (s, e) => BeginInvoke((Action)ComputeAndRender);
+
+                _debounceTimer = new Timer();
+                _debounceTimer.Interval = 200;
+                _debounceTimer.Tick += (s, e) => { _debounceTimer.Stop(); ComputeAndRender(); };
+
+                FileSystemEventHandler onFsEvent = (s, e) =>
+                {
+                    if (_debounceTimer.Enabled) _debounceTimer.Stop();
+                    _debounceTimer.Start();
+                };
+
+                _watcher.Changed += onFsEvent;
+                _watcher.Created += onFsEvent;
+                _watcher.Renamed += (s, e) => onFsEvent(s, e);
                 _watcher.EnableRaisingEvents = true;
             }
             catch { /* ignore watcher errors */ }
@@ -381,6 +416,37 @@ namespace OneKickHeroesApp
         private void FormSummary_Load(object sender, EventArgs e)
         {
 
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            try
+            {
+                if (_watcher != null) { _watcher.EnableRaisingEvents = false; _watcher.Dispose(); _watcher = null; }
+                if (_debounceTimer != null) { _debounceTimer.Stop(); _debounceTimer.Dispose(); _debounceTimer = null; }
+            }
+            catch { }
+            base.OnFormClosed(e);
+        }
+
+        private void OnRankColumnClick(object sender, ColumnClickEventArgs e)
+        {
+            if (e.Column == 0)
+            {
+                rankList.ListViewItemSorter = Comparer<ListViewItem>.Create((a, b) => string.Compare(a.SubItems[0].Text, b.SubItems[0].Text, StringComparison.OrdinalIgnoreCase));
+            }
+            else if (e.Column == 1)
+            {
+                Func<ListViewItem, int> extract = item =>
+                {
+                    var text = item.SubItems[1].Text;
+                    var space = text.IndexOf(' ');
+                    var numPart = space > 0 ? text.Substring(0, space) : text;
+                    int n; return int.TryParse(numPart, NumberStyles.Integer, CultureInfo.CurrentCulture, out n) ? n : 0;
+                };
+                rankList.ListViewItemSorter = Comparer<ListViewItem>.Create((a, b) => extract(b).CompareTo(extract(a)));
+            }
+            rankList.Sort();
         }
     }
 }
