@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using OneKickHeroesApp.Data;
 
 namespace OneKickHeroesApp
 {
@@ -264,15 +265,41 @@ namespace OneKickHeroesApp
                 txtScore.Focus(); return;
             }
 
-            // Rank auto-generated and corresponding threat level
-            string rank = CalculateRank(score);
-            string threat = CalculateThreat(rank);
+            // Build hero model (Rank/Threat derived in model)
+            var hero = new Hero(heroId, name, age, power, score);
 
             try
             {
                 string dataDir = Path.Combine(Application.StartupPath, "Data");
                 Directory.CreateDirectory(dataDir);
                 string file = Path.Combine(dataDir, "superheroes.txt");
+
+                // Prevent duplicate Hero IDs
+                if (File.Exists(file))
+                {
+                    using (var reader = new StreamReader(file))
+                    {
+                        string readLine;
+                        bool isFirst = true;
+                        while ((readLine = reader.ReadLine()) != null)
+                        {
+                            if (isFirst) { isFirst = false; continue; } // skip header
+                            if (string.IsNullOrWhiteSpace(readLine)) continue;
+                            var parts = readLine.Split('|');
+                            if (parts.Length > 0)
+                            {
+                                int existingId;
+                                if (int.TryParse((parts[0] ?? "").Trim(), out existingId) && existingId == heroId)
+                                {
+                                    MessageBox.Show("Hero ID already exists. Please use a different 4-digit ID.",
+                                        "Duplicate ID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                    txtHeroId.Focus();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
 
                 if (!File.Exists(file))
                 {
@@ -282,19 +309,15 @@ namespace OneKickHeroesApp
                     }
                 }
 
-                string line = string.Format(CultureInfo.InvariantCulture,
-                    "{0}|{1}|{2}|{3}|{4}|{5}|{6}",
-                    heroId, name, age, power, score, rank, threat);
-
                 using (var writer = new StreamWriter(file, true))
                 {
-                    writer.WriteLine(line);
+                    writer.WriteLine(hero.ToString());
                 }
 
                 MessageBox.Show(
                     "Superhero added successfully!" + Environment.NewLine +
-                    "Hero ID: " + heroId + Environment.NewLine +
-                    "Rank: " + rank,
+                    "Hero ID: " + hero.Id + Environment.NewLine +
+                    "Rank: " + hero.Rank.ToString(),
                     "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 ClearForm();
@@ -306,24 +329,9 @@ namespace OneKickHeroesApp
             }
         }
 
-        private string CalculateRank(double s)
-        {
-            if (s >= 81) return "S";
-            if (s >= 61) return "A";
-            if (s >= 41) return "B";
-            return "C";
-        }
+       
 
-        private string CalculateThreat(string rank)
-        {
-            switch ((rank ?? "").ToUpperInvariant())
-            {
-                case "S": return "FinalsWeek";
-                case "A": return "MidtermMadness";
-                case "B": return "GroupProjectGoneWrong";
-                default: return "PopQuiz";
-            }
-        }
+        
 
         private void ClearForm()
         {

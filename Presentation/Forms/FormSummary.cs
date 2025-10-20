@@ -30,10 +30,15 @@ namespace OneKickHeroesApp
         private Label statTotal;
         private Label statAvgAge;
         private Label statAvgScore;
+        private Label statMinScore;
+        private Label statMaxScore;
         private ListView rankList;
         private Button btnSave;
-        private Button btnBack;
+        private Button btnRefresh;
         private Label banner;
+
+        private HeroService _heroService;
+        private FileSystemWatcher _watcher;
 
         private int total = 0;
         private double avgAge = 0;
@@ -43,15 +48,13 @@ namespace OneKickHeroesApp
             {"S",0}, {"A",0}, {"B",0}, {"C",0}
         };
 
-        // Services
-        private readonly HeroService _heroService;
-
         public FormSummary()
         {
             InitializeComponent();
             _heroService = new HeroService();
             BuildUI();
             ComputeAndRender();
+            EnableAutoRefresh();
         }
 
         // ---------- UI ----------
@@ -103,7 +106,7 @@ namespace OneKickHeroesApp
             Controls.Add(subtitle);
 
             // Stat cards row
-            var cardW = 260; var cardH = 120; var gap = 16; var left = 30;
+            var cardW = 260; var cardH = 180; var gap = 16; var left = 30;
             var top = 92;
 
             var cardTotal = MakeCard(cardW, cardH);
@@ -128,8 +131,15 @@ namespace OneKickHeroesApp
             cardAge.Controls.Add(t2); cardAge.Controls.Add(statAvgAge);
 
             var t3 = new Label { Text = "Avg Exam Score", Font = Theme.Body, ForeColor = Theme.Muted, AutoSize = true, Location = new Point(8, 8) };
-            statAvgScore = new Label { Text = "0", Font = Theme.Stat, ForeColor = Theme.Text, AutoSize = true, Location = new Point(8, 38) };
-            cardScore.Controls.Add(t3); cardScore.Controls.Add(statAvgScore);
+            statAvgScore = new Label { Text = "0", Font = Theme.Stat, ForeColor = Theme.Text, AutoSize = true, Location = new Point(8, 36) };
+            // Min/Max stacked with wrapping to avoid clipping
+            var t3a = new Label { Text = "Min / Max", Font = Theme.Body, ForeColor = Theme.Muted, AutoSize = true, Location = new Point(8, 78) };
+            statMinScore = new Label { Text = "Min: -", Font = Theme.Body, ForeColor = Theme.Text, AutoSize = true, Location = new Point(8, 98) };
+            statMaxScore = new Label { Text = "Max: -", Font = Theme.Body, ForeColor = Theme.Text, AutoSize = true, Location = new Point(8, 124) };
+            // Allow wrapping within the card width
+            statMinScore.MaximumSize = new Size(cardW - 24, 0);
+            statMaxScore.MaximumSize = new Size(cardW - 24, 0);
+            cardScore.Controls.Add(t3); cardScore.Controls.Add(statAvgScore); cardScore.Controls.Add(t3a); cardScore.Controls.Add(statMinScore); cardScore.Controls.Add(statMaxScore);
 
             // Rank table
             var rankCard = MakeCard(380, 250);
@@ -154,7 +164,7 @@ namespace OneKickHeroesApp
             rankList.Columns.Add("Total", 100, HorizontalAlignment.Left);
             rankCard.Controls.Add(rankList);
 
-            // Buttons
+            // Save button
             btnSave = new Button
             {
                 Text = "Save to summary.txt",
@@ -171,22 +181,23 @@ namespace OneKickHeroesApp
             btnSave.Click += OnSaveClicked;
             Controls.Add(btnSave);
 
-            btnBack = new Button
+            // Refresh button
+            btnRefresh = new Button
             {
-                Text = "← Back to Home",
+                Text = "Refresh",
                 Font = Theme.Body,
                 ForeColor = Theme.Text,
                 BackColor = Color.FromArgb(22, 27, 34),
                 FlatStyle = FlatStyle.Flat,
                 Height = 44,
-                Width = 140,
-                Location = new Point(btnSave.Right + 20, rankCard.Bottom - 44)
+                Width = 120,
+                Location = new Point(btnSave.Right + 16, rankCard.Bottom - 44)
             };
-            btnBack.FlatAppearance.BorderSize = 1;
-            btnBack.FlatAppearance.BorderColor = Theme.Border;
-            btnBack.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnBack.Click += OnBackClicked;
-            Controls.Add(btnBack);
+            btnRefresh.FlatAppearance.BorderSize = 1;
+            btnRefresh.FlatAppearance.BorderColor = Theme.Border;
+            btnRefresh.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnRefresh.Click += (s,e) => ComputeAndRender();
+            Controls.Add(btnRefresh);
 
             // Success banner
             banner = new Label
@@ -217,52 +228,56 @@ namespace OneKickHeroesApp
                 rankList.Size = new Size(rankCard.Width - 16, rankCard.Height - 50);
 
                 btnSave.Location = new Point(rankCard.Right + 40, rankCard.Bottom - 44);
-                btnBack.Location = new Point(btnSave.Right + 20, rankCard.Bottom - 44);
+                btnRefresh.Location = new Point(btnSave.Right + 16, rankCard.Bottom - 44);
                 banner.Location = new Point(btnSave.Left - 20, btnSave.Top - 60);
             };
         }
 
-        // ---------- Data & computations ----------
         private void ComputeAndRender()
         {
-            try
+            var heroes = new List<OneKickHeroesApp.Data.Hero>();
+            try { heroes = new OneKickHeroesApp.Data.HeroService().GetAllHeroes(); }
+            catch { heroes = new List<OneKickHeroesApp.Data.Hero>(); }
+
+            total = heroes.Count;
+            avgAge = heroes.Count > 0 ? heroes.Average(h => h.Age) : 0;
+            avgScore = heroes.Count > 0 ? heroes.Average(h => h.Score) : 0;
+
+            // reset counts
+            //var sCount = heroes.Count(h => h.Rank == "S");
+            //var aCount = heroes.Count(h => h.Rank == "A");
+            //var bCount = heroes.Count(h => h.Rank == "B");
+            //var cCount = heroes.Count(h => h.Rank == "C");
+            //rankCounts["S"] = sCount;
+            //rankCounts["A"] = aCount;
+            //rankCounts["B"] = bCount;
+            //rankCounts["C"] = cCount;
+
+            // min/max (compute scores first to avoid any ordering ambiguity)
+            Hero minHero = null;
+            Hero maxHero = null;
+            if (heroes.Count > 0)
             {
-                // Get all heroes using HeroService
-                var heroes = _heroService.GetAllHeroes();
-
-                total = heroes.Count;
-                avgAge = heroes.Count > 0 ? heroes.Average(h => h.Age) : 0;
-                avgScore = heroes.Count > 0 ? heroes.Average(h => h.Score) : 0;
-
-                // Reset rank counts
-                rankCounts["S"] = heroes.Count(h => h.Rank == Rank.S);
-                rankCounts["A"] = heroes.Count(h => h.Rank == Rank.A);
-                rankCounts["B"] = heroes.Count(h => h.Rank == Rank.B);
-                rankCounts["C"] = heroes.Count(h => h.Rank == Rank.C);
-
-                // Render statistics
-                statTotal.Text = total.ToString(CultureInfo.CurrentCulture);
-                statAvgAge.Text = avgAge.ToString("0.#", CultureInfo.CurrentCulture);
-                statAvgScore.Text = avgScore.ToString("0.#", CultureInfo.CurrentCulture);
-
-                // Update rank list
-                rankList.Items.Clear();
-                AddRankRow("S");
-                AddRankRow("A");
-                AddRankRow("B");
-                AddRankRow("C");
+                var minScore = heroes.Min(h => h.Score);
+                var maxScore = heroes.Max(h => h.Score);
+                minHero = heroes.FirstOrDefault(h => Math.Abs(h.Score - minScore) < 0.000001);
+                maxHero = heroes.FirstOrDefault(h => Math.Abs(h.Score - maxScore) < 0.000001);
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Failed to load hero data.\n" + ex.Message, "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                
-                // Set default values
-                statTotal.Text = "0";
-                statAvgAge.Text = "0";
-                statAvgScore.Text = "0";
-                rankList.Items.Clear();
-            }
+
+            // render
+            statTotal.Text = total.ToString(CultureInfo.CurrentCulture);
+            statAvgAge.Text = avgAge.ToString("0.#", CultureInfo.CurrentCulture);
+            statAvgScore.Text = avgScore.ToString("0.#", CultureInfo.CurrentCulture);
+            statMinScore.Text = minHero != null ?
+                ("Min: " + minHero.Score.ToString("0.#", CultureInfo.CurrentCulture) + " (" + minHero.Id.ToString(CultureInfo.CurrentCulture) + ": " + minHero.Name + ")") : "Min: -";
+            statMaxScore.Text = maxHero != null ?
+                ("Max: " + maxHero.Score.ToString("0.#", CultureInfo.CurrentCulture) + " (" + maxHero.Id.ToString(CultureInfo.CurrentCulture) + ": " + maxHero.Name + ")") : "Max: -";
+
+            rankList.Items.Clear();
+            AddRankRowWithPercent("S", sCount, total);
+            AddRankRowWithPercent("A", aCount, total);
+            AddRankRowWithPercent("B", bCount, total);
+            AddRankRowWithPercent("C", cCount, total);
         }
 
         private void AddRankRow(string r)
@@ -271,6 +286,17 @@ namespace OneKickHeroesApp
             {
                 r,
                 rankCounts[r].ToString(CultureInfo.CurrentCulture)
+            });
+            rankList.Items.Add(item);
+        }
+
+        private void AddRankRowWithPercent(string r, int count, int totalCount)
+        {
+            string pct = totalCount > 0 ? (" (" + (count * 100.0 / totalCount).ToString("0.#", CultureInfo.CurrentCulture) + "%)") : "";
+            var item = new ListViewItem(new[]
+            {
+                r,
+                count.ToString(CultureInfo.CurrentCulture) + pct
             });
             rankList.Items.Add(item);
         }
@@ -309,15 +335,21 @@ namespace OneKickHeroesApp
             }
         }
 
-        /// <summary>
-        /// Handles the back button click
-        /// </summary>
-        private void OnBackClicked(object sender, EventArgs e)
+        // ---------- Helpers ----------
+        private void EnableAutoRefresh()
         {
-            // Return to home form
-            var homeForm = new FormHome();
-            homeForm.Show();
-            this.Hide();
+            try
+            {
+                string dir = Path.Combine(Application.StartupPath, "Data");
+                Directory.CreateDirectory(dir);
+                _watcher = new FileSystemWatcher(dir, "superheroes.txt");
+                _watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName;
+                _watcher.Changed += (s, e) => BeginInvoke((Action)ComputeAndRender);
+                _watcher.Created += (s, e) => BeginInvoke((Action)ComputeAndRender);
+                _watcher.Renamed += (s, e) => BeginInvoke((Action)ComputeAndRender);
+                _watcher.EnableRaisingEvents = true;
+            }
+            catch { /* ignore watcher errors */ }
         }
 
         private void FormSummary_Load(object sender, EventArgs e)
