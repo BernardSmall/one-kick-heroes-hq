@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using OneKickHeroesApp.Data;
 
 namespace OneKickHeroesApp
 {
@@ -28,11 +29,14 @@ namespace OneKickHeroesApp
 
         private DataGridView grid;
         private Button btnDelete;
+        private Button btnBack;
         private Label banner;
+        private HeroService _heroService;
 
         public FormDeleteHero()
         {
             InitializeComponent();
+            _heroService = new HeroService();
             BuildUI();
             LoadData();
         }
@@ -76,8 +80,8 @@ namespace OneKickHeroesApp
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
-                ReadOnly = false,
-                MultiSelect = true,
+                ReadOnly = true,
+                MultiSelect = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 RowHeadersVisible = false,
                 BackgroundColor = Theme.Surface,
@@ -96,7 +100,6 @@ namespace OneKickHeroesApp
             grid.DefaultCellStyle.SelectionForeColor = Theme.Text;
 
             // Columns
-            var colChk = new DataGridViewCheckBoxColumn { HeaderText = "", Width = 36, ReadOnly = false };
             var colId = new DataGridViewTextBoxColumn { HeaderText = "Hero ID", Width = 110, ReadOnly = true };
             var colName = new DataGridViewTextBoxColumn { HeaderText = "Name", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, ReadOnly = true };
             var colAge = new DataGridViewTextBoxColumn { HeaderText = "Age", Width = 70, ReadOnly = true };
@@ -105,25 +108,44 @@ namespace OneKickHeroesApp
             var colRank = new DataGridViewTextBoxColumn { HeaderText = "Rank", Width = 80, ReadOnly = true };
             var colIdRaw = new DataGridViewTextBoxColumn { Name = "IdRaw", Visible = false }; // numeric id for logic
 
-            grid.Columns.AddRange(new DataGridViewColumn[] { colChk, colId, colName, colAge, colPow, colScore, colRank, colIdRaw });
+            grid.Columns.AddRange(new DataGridViewColumn[] { colId, colName, colAge, colPow, colScore, colRank, colIdRaw });
             Controls.Add(grid);
 
             // Delete button
             btnDelete = new Button
             {
-                Text = "Delete",
+                Text = "Delete Selected Hero",
                 Font = Theme.H2,
                 ForeColor = Color.White,
                 BackColor = Theme.Danger,
                 FlatStyle = FlatStyle.Flat,
                 Height = 44,
-                Width = 220,
+                Width = 200,
                 Location = new Point(30, grid.Bottom + 16),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+                Enabled = false
             };
             btnDelete.FlatAppearance.BorderSize = 0;
             btnDelete.Click += OnDeleteClicked;
             Controls.Add(btnDelete);
+
+            // Back button
+            btnBack = new Button
+            {
+                Text = "← Back to Home",
+                Font = Theme.Body,
+                ForeColor = Theme.Text,
+                BackColor = Color.FromArgb(22, 27, 34),
+                FlatStyle = FlatStyle.Flat,
+                Height = 44,
+                Width = 150,
+                Location = new Point(btnDelete.Right + 16, grid.Bottom + 16),
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+            };
+            btnBack.FlatAppearance.BorderSize = 1;
+            btnBack.FlatAppearance.BorderColor = Theme.Border;
+            btnBack.Click += (s, e) => { var home = new FormHome(); home.Show(); this.Hide(); };
+            Controls.Add(btnBack);
 
             // Success banner (hidden by default)
             banner = new Label
@@ -149,126 +171,97 @@ namespace OneKickHeroesApp
             {
                 grid.Size = new Size(ClientSize.Width - 60, ClientSize.Height - 220);
                 btnDelete.Top = grid.Bottom + 16;
+                btnBack.Top = grid.Bottom + 16;
                 banner.Top = btnDelete.Bottom + 12;
                 banner.Width = ClientSize.Width - 60;
             };
+
+            // Enable/disable delete button based on selection
+            grid.SelectionChanged += (s, e) => btnDelete.Enabled = grid.SelectedRows.Count > 0;
         }
 
         // ---------- Data ----------
-        private string EnsureCsv()
-        {
-            string dataDir = Path.Combine(Application.StartupPath, "Data");
-            Directory.CreateDirectory(dataDir);
-            string file = Path.Combine(dataDir, "heroes.csv");
-            if (!File.Exists(file))
-                File.WriteAllText(file, "Id,Name,Age,Power,Score,Rank" + Environment.NewLine);
-            return file;
-        }
-
         private void LoadData()
         {
-            grid.Rows.Clear();
-
-            string file = EnsureCsv();
-            var rows = File.ReadAllLines(file)
-                           .Skip(1)
-                           .Select(l => l.Split(','))
-                           .Where(p => p.Length >= 6)
-                           .Select(p => new
-                           {
-                               IdRaw = SafeInt(p[0]),
-                               IdDisp = FormatId(SafeInt(p[0])),
-                               Name = UnescapeCsv(p[1]),
-                               Age = p[2],
-                               Power = UnescapeCsv(p[3]),
-                               Score = p[4],
-                               Rank = p[5]
-                           });
-
-            foreach (var r in rows)
+            try
             {
-                grid.Rows.Add(false, r.IdDisp, r.Name, r.Age, r.Power, r.Score, r.Rank, r.IdRaw);
-            }
+                grid.Rows.Clear();
 
-            banner.Visible = false;
+                var heroes = _heroService.GetAllHeroes()
+                    .Where(h => h != null && h.IsValid())
+                    .OrderBy(h => h.Id)
+                    .ToList();
+
+                foreach (var hero in heroes)
+                {
+                    grid.Rows.Add(
+                        FormatId(hero.Id),           // Hero ID (H-0001 format)
+                        hero.Name,                   // Name
+                        hero.Age.ToString(),         // Age
+                        hero.Power,                  // Superpower
+                        hero.Score.ToString("0.#"),  // Exam Score
+                        hero.Rank,                   // Rank
+                        hero.Id                      // Raw ID for logic
+                    );
+                }
+
+                banner.Visible = false;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to load heroes.\n" + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         // ---------- Actions ----------
         private void OnDeleteClicked(object sender, EventArgs e)
         {
-            // Collect selected IDs
-            var ids = new List<int>();
-            foreach (DataGridViewRow row in grid.Rows)
+            if (grid.SelectedRows.Count == 0)
             {
-                var chk = row.Cells[0].Value;
-                bool isChecked = chk != null && (bool)chk;
-                if (isChecked)
-                {
-                    int id = (int)row.Cells["IdRaw"].Value;
-                    ids.Add(id);
-                }
-            }
-
-            if (ids.Count == 0)
-            {
-                MessageBox.Show("Please select at least one superhero to delete.", "Nothing selected",
+                MessageBox.Show("Please select a superhero to delete.", "Nothing selected",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            string msg = ids.Count == 1 ? "Are you sure you want to delete this superhero?"
-                                        : "Are you sure you want to delete the selected superheroes?";
-            var confirm = MessageBox.Show(msg, "Confirm Delete",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+            var selectedRow = grid.SelectedRows[0];
+            int heroId = (int)selectedRow.Cells["IdRaw"].Value;
+            string heroName = selectedRow.Cells[1].Value.ToString(); // Name column
+
+            var confirm = MessageBox.Show(
+                $"Are you sure you want to delete {heroName} (ID: {FormatId(heroId)})?",
+                "Confirm Delete",
+                MessageBoxButtons.YesNo, 
+                MessageBoxIcon.Warning, 
+                MessageBoxDefaultButton.Button2);
 
             if (confirm != DialogResult.Yes) return;
 
             try
             {
-                string file = EnsureCsv();
-                var lines = File.ReadAllLines(file).ToList();
-
-                // Keep header + rows whose ID is not in ids
-                var kept = new List<string>();
-                if (lines.Count > 0) kept.Add(lines[0]); // header
-
-                for (int i = 1; i < lines.Count; i++)
+                bool success = _heroService.DeleteHero(heroId);
+                
+                if (success)
                 {
-                    var parts = lines[i].Split(',');
-                    if (parts.Length == 0) continue;
-                    int id = SafeInt(parts[0]);
-                    if (!ids.Contains(id))
-                        kept.Add(lines[i]);
+                    // Refresh the grid
+                    LoadData();
+                    banner.Text = $"✓  {heroName} deleted successfully.";
+                    banner.Visible = true;
                 }
-
-                File.WriteAllLines(file, kept.ToArray());
-
-                // Refresh grid
-                LoadData();
-                banner.Visible = true;
+                else
+                {
+                    MessageBox.Show($"Failed to delete {heroName}. Hero may not exist.", "Delete Failed",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Failed to delete.\n" + ex.Message, "Error",
+                MessageBox.Show($"Failed to delete hero.\n{ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         // ---------- Helpers ----------
-        private static int SafeInt(string s)
-        {
-            int v; return int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out v) ? v : -1;
-        }
-
-        private static string UnescapeCsv(string value)
-        {
-            if (string.IsNullOrEmpty(value)) return "";
-            value = value.Trim();
-            if (value.StartsWith("\"") && value.EndsWith("\""))
-                value = value.Substring(1, value.Length - 2).Replace("\"\"", "\"");
-            return value;
-        }
-
         private static string FormatId(int id)
         {
             // H-0001 style
