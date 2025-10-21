@@ -93,11 +93,13 @@
     <Compile Include="Presentation\Forms\FormUpdateHero.Designer.cs">
       <DependentUpon>FormUpdateHero.cs</DependentUpon>
     </Compile>
-    <Compile Include="Presentation\Forms\FormViewAll.cs">
+    <Compile Include="..\..\..\..\Downloads\FromViewAll.cs">
       <SubType>Form</SubType>
+      <Link>Presentation\Forms\FromViewAll.cs</Link>
     </Compile>
-    <Compile Include="Presentation\Forms\FormViewAll.Designer.cs">
-      <DependentUpon>FormViewAll.cs</DependentUpon>
+    <Compile Include="..\..\..\..\Downloads\FromViewAll.Designer.cs">
+      <DependentUpon>FromViewAll.cs</DependentUpon>
+      <Link>Presentation\Forms\FromViewAll.Designer.cs</Link>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -119,8 +121,9 @@
     <EmbeddedResource Include="Presentation\Forms\FormUpdateHero.resx">
       <DependentUpon>FormUpdateHero.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Presentation\Forms\FormViewAll.resx">
-      <DependentUpon>FormViewAll.cs</DependentUpon>
+    <EmbeddedResource Include="..\..\..\..\Downloads\FromViewAll.resx">
+      <DependentUpon>FromViewAll.cs</DependentUpon>
+      <Link>Presentation\Forms\FromViewAll.resx</Link>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -148,7 +151,9 @@
     <Folder Include="Business\" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Presentation\Forms\superheroes.txt" />
+    <Content Include="..\..\..\..\Downloads\superheroes.txt">
+      <Link>Presentation\Forms\superheroes.txt</Link>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
