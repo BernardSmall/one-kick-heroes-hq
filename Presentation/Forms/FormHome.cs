@@ -219,15 +219,19 @@ namespace OneKickHeroesApp
             left.Controls.Add(NavButton("🗑️  Delete Superhero", "Remove selected record",
                 delegate { new FormDeleteHero().ShowDialog(); }));
 
+            // View All Heroes button (same style as others)
+            left.Controls.Add(NavButton("👥  View All Heroes", "Browse all records",
+                delegate { new FormViewAll().ShowDialog(); }));
+
             left.Controls.Add(NavButton("📊  Summary", "Totals & averages",
                 delegate { new FormSummary().ShowDialog(); }));
 
-            // NEW: Single Hero Summary button (same style)
+            // Single Hero Summary button
             left.Controls.Add(NavButton("👤  Single Hero Summary", "View one hero’s details",
                 delegate { new FormHeroSummary().ShowDialog(); }));
 
             // ---------- Right column ----------
-            var right = new FlowLayoutPanel
+            var right = new FlowLayoutPanel   // ✅ fixed: removed stray 'a'
             {
                 FlowDirection = FlowDirection.TopDown,
                 Dock = DockStyle.Fill,
