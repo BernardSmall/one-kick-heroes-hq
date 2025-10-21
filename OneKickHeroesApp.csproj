@@ -101,14 +101,14 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Presentation\Forms\FormHome.resx">
+      <DependentUpon>FormHome.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Presentation\Forms\FormAddHero.resx">
       <DependentUpon>FormAddHero.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Presentation\Forms\FormDeleteHero.resx">
       <DependentUpon>FormDeleteHero.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Presentation\Forms\FormHome.resx">
-      <DependentUpon>FormHome.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Presentation\Forms\FormImportExport.resx">
       <DependentUpon>FormImportExport.cs</DependentUpon>
@@ -149,9 +149,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Presentation\Forms\superheroes.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="superheroes.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
