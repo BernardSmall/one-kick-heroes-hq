@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using OneKickHeroesApp.Data;
 
 namespace OneKickHeroesApp
 {
@@ -26,19 +27,22 @@ namespace OneKickHeroesApp
         }
 
         // Inputs
-        private TextBox txtId;
+        private ComboBox cmbHeroId;
         private Button btnLoad;
         private TextBox txtName;
         private TextBox txtAge;
         private TextBox txtPower;
         private TextBox txtScore;
-        private TextBox txtRank;
+        private Label lblRank;
         private Button btnSave;
+        private HeroService heroService;
 
         public FormUpdateHero()
         {
             InitializeComponent();
+            heroService = new HeroService();
             BuildUI();
+            LoadHeroIds();
         }
 
         private void BuildUI()
@@ -122,12 +126,21 @@ namespace OneKickHeroesApp
                 return tb;
             };
 
-            // --- Hero ID + Load button row ---
-            var lblId = mkLabel("Hero ID");
+            // --- Hero ID Dropdown + Load button row ---
+            var lblId = mkLabel("Select Hero ID");
             card.Controls.Add(lblId);
-            txtId = mkInput(y + 28);
-            txtId.Width = card.Width - 80 - 120; // leave space for Load
-            card.Controls.Add(txtId);
+
+            cmbHeroId = new ComboBox
+            {
+                BackColor = Color.FromArgb(22, 27, 34),
+                ForeColor = Theme.Text,
+                Font = Theme.Body,
+                Width = card.Width - 80 - 120, // leave space for Load
+                Location = new Point(12, y + 28),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbHeroId.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            card.Controls.Add(cmbHeroId);
 
             btnLoad = new Button
             {
@@ -136,16 +149,16 @@ namespace OneKickHeroesApp
                 ForeColor = Color.White,
                 BackColor = Theme.Accent,
                 FlatStyle = FlatStyle.Flat,
-                Height = txtId.Height + 2,
+                Height = cmbHeroId.Height + 2,
                 Width = 100,
-                Location = new Point(txtId.Right + 12, txtId.Top - 1),
+                Location = new Point(cmbHeroId.Right + 12, cmbHeroId.Top - 1),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             btnLoad.FlatAppearance.BorderSize = 0;
-            btnLoad.Click += delegate { LoadById(); };
+            btnLoad.Click += delegate { LoadSelectedHero(); };
             card.Controls.Add(btnLoad);
 
-            y = txtId.Bottom + gap;
+            y = cmbHeroId.Bottom + gap;
 
             // Name
             var lblName = mkLabel("Name"); lblName.Top = y;
@@ -177,16 +190,16 @@ namespace OneKickHeroesApp
             var lblScore = mkLabel("Hero Exam Score"); lblScore.Top = y;
             card.Controls.Add(lblScore);
 
-            var lblRank = new Label
+            var lblRankLabel = new Label
             {
-                Text = "Rank",
+                Text = "Calculated Rank",
                 ForeColor = Theme.Text,
                 Font = Theme.H2,
                 AutoSize = true,
                 Location = new Point(card.Width / 2 + 12, y)
             };
-            lblRank.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            card.Controls.Add(lblRank);
+            lblRankLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            card.Controls.Add(lblRankLabel);
 
             txtScore = mkInput(y + 28);
             txtScore.Width = (card.Width - 80) / 2 - 12;
@@ -199,13 +212,21 @@ namespace OneKickHeroesApp
             };
             card.Controls.Add(txtScore);
 
-            txtRank = mkInput(y + 28);
-            txtRank.ReadOnly = true;
-            txtRank.TabStop = false;
-            txtRank.Location = new Point(card.Width / 2 + 12, y + 28);
-            txtRank.Width = (card.Width - 80) / 2 - 12;
-            txtRank.BackColor = Color.FromArgb(28, 33, 41);
-            card.Controls.Add(txtRank);
+            lblRank = new Label
+            {
+                Text = "",
+                ForeColor = Theme.Accent,
+                Font = new Font(Theme.Body.FontFamily, 12, FontStyle.Bold),
+                AutoSize = true,
+                Location = new Point(card.Width / 2 + 12, y + 28),
+                BackColor = Color.FromArgb(28, 33, 41),
+                BorderStyle = BorderStyle.FixedSingle,
+                Width = (card.Width - 80) / 2 - 12,
+                Height = txtScore.Height,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            lblRank.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            card.Controls.Add(lblRank);
 
             y = txtScore.Bottom + 28;
 
@@ -230,183 +251,181 @@ namespace OneKickHeroesApp
             {
                 int colW = (card.Width - 80) / 2 - 12;
                 txtScore.Width = colW;
-                txtRank.Width = colW;
-                txtRank.Left = card.Width / 2 + 12;
+                lblRank.Width = colW;
                 lblRank.Left = card.Width / 2 + 12;
+                lblRankLabel.Left = card.Width / 2 + 12;
 
-                txtId.Width = card.Width - 80 - 120;
-                btnLoad.Left = txtId.Right + 12;
+                cmbHeroId.Width = card.Width - 80 - 120;
+                btnLoad.Left = cmbHeroId.Right + 12;
 
                 foreach (Control c in card.Controls)
                 {
                     var tb = c as TextBox;
-                    if (tb != null && tb != txtScore && tb != txtRank && tb != txtId)
+                    // Resize all textboxes except the special half-width score field
+                    if (tb != null && tb != txtScore)
                         tb.Width = card.Width - 80;
                 }
             };
         }
 
         // -------- Logic --------
-        private void LoadById()
+        private void LoadHeroIds()
         {
-            int id;
-            if (!TryParseId(txtId.Text, out id))
+            try
             {
-                MessageBox.Show("Enter a valid numeric Hero ID (e.g., 119 or #H-0119).",
-                    "Invalid ID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtId.Focus(); return;
+                var heroes = heroService.GetAllHeroes();
+                cmbHeroId.Items.Clear();
+
+                foreach (var hero in heroes.OrderBy(h => h.Id))
+                {
+                    cmbHeroId.Items.Add($"{hero.Id} - {hero.Name}");
+                }
+
+                if (cmbHeroId.Items.Count > 0)
+                {
+                    cmbHeroId.SelectedIndex = 0;
+                }
             }
-
-            string file = EnsureCsv();
-            var rec = File.ReadAllLines(file)
-                          .Skip(1)
-                          .Select(l => l.Split(','))
-                          .FirstOrDefault(p => p.Length >= 6 && SafeInt(p[0]) == id);
-
-            if (rec == null)
+            catch (Exception ex)
             {
-                MessageBox.Show("Hero not found.", "Not found",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Error loading heroes: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadSelectedHero()
+        {
+            if (cmbHeroId.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a hero from the dropdown.", "No Selection",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            txtName.Text = UnescapeCsv(rec[1]);
-            txtAge.Text = rec[2];
-            txtPower.Text = UnescapeCsv(rec[3]);
-            txtScore.Text = rec[4];
-            txtRank.Text = rec[5];
+            try
+            {
+                var selectedText = cmbHeroId.SelectedItem.ToString();
+                var heroId = int.Parse(selectedText.Split(' ')[0]);
+
+                var heroes = heroService.GetAllHeroes();
+                var hero = heroes.FirstOrDefault(h => h.Id == heroId);
+
+                if (hero == null)
+                {
+                    MessageBox.Show("Hero not found.", "Not Found",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                txtName.Text = hero.Name;
+                txtAge.Text = hero.Age.ToString();
+                txtPower.Text = hero.Power;
+                txtScore.Text = hero.Score.ToString("F1");
+                lblRank.Text = hero.Rank;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading hero: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void OnSaveClicked(object sender, EventArgs e)
         {
-            int id;
-            if (!TryParseId(txtId.Text, out id))
+            if (cmbHeroId.SelectedItem == null)
             {
-                MessageBox.Show("Enter a valid numeric Hero ID (e.g., 119 or #H-0119).",
-                    "Invalid ID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtId.Focus(); return;
-            }
-
-            string name = (txtName.Text ?? "").Trim();
-            string power = (txtPower.Text ?? "").Trim();
-            if (string.IsNullOrEmpty(name))
-            {
-                MessageBox.Show("Name is required.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtName.Focus(); return;
-            }
-
-            int age;
-            if (!int.TryParse((txtAge.Text ?? "").Trim(), out age) || age < 10 || age > 100)
-            {
-                MessageBox.Show("Age must be a number between 10 and 100.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtAge.Focus(); return;
-            }
-
-            double score;
-            if (!double.TryParse((txtScore.Text ?? "").Trim(), NumberStyles.Float, CultureInfo.CurrentCulture, out score) ||
-                score < 0.0 || score > 100.0)
-            {
-                MessageBox.Show("Hero Exam Score must be between 0 and 100.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtScore.Focus(); return;
-            }
-
-            string rank = CalculateRank(score);
-            txtRank.Text = rank;
-
-            string file = EnsureCsv();
-            var lines = File.ReadAllLines(file).ToList();
-
-            // find row index for this ID
-            int idx = -1;
-            for (int i = 1; i < lines.Count; i++)
-            {
-                var parts = lines[i].Split(',');
-                if (parts.Length >= 1 && SafeInt(parts[0]) == id)
-                {
-                    idx = i; break;
-                }
-            }
-
-            if (idx == -1)
-            {
-                MessageBox.Show("Hero not found. Load it first or verify the ID.",
-                    "Not found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Please select a hero to update.", "No Selection",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            string newline = string.Format(CultureInfo.InvariantCulture,
-                "{0},{1},{2},{3},{4},{5}",
-                id, EscapeCsv(name), age, EscapeCsv(power), score, rank);
+            try
+            {
+                // Get the selected hero ID
+                var selectedText = cmbHeroId.SelectedItem.ToString();
+                var heroId = int.Parse(selectedText.Split(' ')[0]);
 
-            lines[idx] = newline;
-            File.WriteAllLines(file, lines.ToArray());
+                // Validate input fields
+                string name = (txtName.Text ?? "").Trim();
+                string power = (txtPower.Text ?? "").Trim();
 
-            MessageBox.Show("Hero updated.", "Saved",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (string.IsNullOrEmpty(name))
+                {
+                    MessageBox.Show("Name is required.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtName.Focus();
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(power))
+                {
+                    MessageBox.Show("Power is required.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtPower.Focus();
+                    return;
+                }
+
+                if (!int.TryParse((txtAge.Text ?? "").Trim(), out int age) || age < 10 || age > 100)
+                {
+                    MessageBox.Show("Age must be a number between 10 and 100.", "Validation",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtAge.Focus();
+                    return;
+                }
+
+                if (!double.TryParse((txtScore.Text ?? "").Trim(), NumberStyles.Float, CultureInfo.CurrentCulture, out double score) ||
+                    score < 0.0 || score > 100.0)
+                {
+                    MessageBox.Show("Hero Exam Score must be between 0 and 100.", "Validation",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtScore.Focus();
+                    return;
+                }
+
+                // Create updated hero object
+                var updatedHero = new Hero(heroId, name, age, power, score);
+
+                // Update the hero using HeroService
+                if (heroService.UpdateHero(updatedHero))
+                {
+                    MessageBox.Show("Hero updated successfully!", "Success",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    // Refresh the dropdown and reload the current hero
+                    LoadHeroIds();
+                    LoadSelectedHero();
+                }
+                else
+                {
+                    MessageBox.Show("Failed to update hero. Hero may not exist.", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error updating hero: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void UpdateRankPreview()
         {
-            double s;
             if (double.TryParse((txtScore.Text ?? "").Trim(), NumberStyles.Float,
-                CultureInfo.CurrentCulture, out s))
+                CultureInfo.CurrentCulture, out double score))
             {
-                txtRank.Text = CalculateRank(s);
+                lblRank.Text = CalculateRank(score);
             }
             else
             {
-                txtRank.Text = "";
+                lblRank.Text = "";
             }
         }
 
-        private string CalculateRank(double s)
+        private string CalculateRank(double score)
         {
-            if (s >= 85) return "S";
-            if (s >= 75) return "A";
-            if (s >= 60) return "B";
+            // Use the same logic as the Hero class
+            if (score >= 81) return "S";
+            if (score >= 61) return "A";
+            if (score >= 41) return "B";
             return "C";
-        }
-
-        private static string EscapeCsv(string value)
-        {
-            if (value == null) return "";
-            bool needQuotes = value.Contains(",") || value.Contains("\"") || value.Contains("\n");
-            string v = value.Replace("\"", "\"\"");
-            return needQuotes ? "\"" + v + "\"" : v;
-        }
-
-        private static string UnescapeCsv(string value)
-        {
-            if (string.IsNullOrEmpty(value)) return "";
-            value = value.Trim();
-            if (value.StartsWith("\"") && value.EndsWith("\""))
-                value = value.Substring(1, value.Length - 2).Replace("\"\"", "\"");
-            return value;
-        }
-
-        private static bool TryParseId(string raw, out int id)
-        {
-            id = 0;
-            if (string.IsNullOrWhiteSpace(raw)) return false;
-
-            // Accept: "119", "H-0119", "#H-0119"
-            var digits = new string(raw.Where(char.IsDigit).ToArray());
-            return int.TryParse(digits, NumberStyles.Integer, CultureInfo.InvariantCulture, out id);
-        }
-
-        private static int SafeInt(string s)
-        {
-            int v; return int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out v) ? v : -1;
-        }
-
-        private static string EnsureCsv()
-        {
-            string dataDir = Path.Combine(Application.StartupPath, "Data");
-            Directory.CreateDirectory(dataDir);
-            string file = Path.Combine(dataDir, "heroes.csv");
-            if (!File.Exists(file))
-                File.WriteAllText(file, "Id,Name,Age,Power,Score,Rank" + Environment.NewLine);
-            return file;
         }
 
         private void FormUpdateHero_Load(object sender, EventArgs e)
