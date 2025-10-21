@@ -28,20 +28,50 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.dgvSuperheroes = new System.Windows.Forms.DataGridView();
+            this.btnViewAll = new System.Windows.Forms.Button();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvSuperheroes)).BeginInit();
             this.SuspendLayout();
+            // 
+            // dgvSuperheroes
+            // 
+            this.dgvSuperheroes.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvSuperheroes.Location = new System.Drawing.Point(32, 152);
+            this.dgvSuperheroes.Name = "dgvSuperheroes";
+            this.dgvSuperheroes.RowTemplate.Height = 24;
+            this.dgvSuperheroes.Size = new System.Drawing.Size(861, 280);
+            this.dgvSuperheroes.TabIndex = 0;
+            this.dgvSuperheroes.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvSuperheroes_CellContentClick);
+            // 
+            // btnViewAll
+            // 
+            this.btnViewAll.Location = new System.Drawing.Point(625, 462);
+            this.btnViewAll.Name = "btnViewAll";
+            this.btnViewAll.Size = new System.Drawing.Size(188, 23);
+            this.btnViewAll.TabIndex = 1;
+            this.btnViewAll.Text = "View All Superheroes";
+            this.btnViewAll.UseVisualStyleBackColor = true;
+            this.btnViewAll.Click += new System.EventHandler(this.button1_Click);
             // 
             // FormViewAll
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(1067, 554);
+            this.Controls.Add(this.btnViewAll);
+            this.Controls.Add(this.dgvSuperheroes);
+            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.Name = "FormViewAll";
             this.Text = "FormViewAll";
             this.Load += new System.EventHandler(this.FormViewAll_Load);
+            ((System.ComponentModel.ISupportInitialize)(this.dgvSuperheroes)).EndInit();
             this.ResumeLayout(false);
 
         }
 
         #endregion
+
+        private System.Windows.Forms.DataGridView dgvSuperheroes;
+        private System.Windows.Forms.Button btnViewAll;
     }
 }
