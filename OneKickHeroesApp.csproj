@@ -46,7 +46,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Domain\Hero.cs" />
+    <Compile Include="Data\Hero.cs" />
+    <Compile Include="Data\HeroService.cs" />
     <Compile Include="Domain\Rank.cs" />
     <Compile Include="Domain\RankRules.cs" />
     <Compile Include="Domain\ThreatLevel.cs" />

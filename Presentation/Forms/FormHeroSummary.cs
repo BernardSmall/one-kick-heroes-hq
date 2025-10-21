@@ -5,6 +5,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using OneKickHeroesApp.Data;
+using System.Collections.Generic;
 
 namespace OneKickHeroesApp
 {
@@ -19,6 +21,7 @@ namespace OneKickHeroesApp
         }
 
         private int loadedId = -1;
+        private HeroService _heroService;
 
         public FormHeroSummary()
         {
@@ -93,14 +96,10 @@ namespace OneKickHeroesApp
                 txtId.Focus();
                 return;
             }
+            int id = (int)((KeyValuePair<int, string>)cboId.SelectedItem).Key;
 
-            string file = EnsureCsv();
-            var rec = File.ReadAllLines(file)
-                          .Skip(1)
-                          .Select(l => l.Split(','))
-                          .FirstOrDefault(p => p.Length >= 6 && SafeInt(p[0]) == id);
-
-            if (rec == null)
+            var hero = _heroService.GetAllHeroes().FirstOrDefault(h => h.Id == id);
+            if (hero == null)
             {
                 MessageBox.Show("Hero not found.", "Not found",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -111,13 +110,8 @@ namespace OneKickHeroesApp
             }
 
             loadedId = id;
-            string name = UnescapeCsv(rec[1]);
-            string age = rec[2];
-            string power = UnescapeCsv(rec[3]);
-            string score = rec[4];
-            string rank = rec[5];
-
-            SetValues(name, age, power, score, rank);
+            SetValues(hero.Name, hero.Age.ToString(CultureInfo.CurrentCulture), hero.Power,
+                hero.Score.ToString("0.#", CultureInfo.CurrentCulture), hero.Rank);
             btnSave.Enabled = true;
         }
 
@@ -199,11 +193,30 @@ namespace OneKickHeroesApp
 
         private static string UnescapeCsv(string value)
         {
-            if (string.IsNullOrEmpty(value)) return "";
-            value = value.Trim();
-            if (value.StartsWith("\"") && value.EndsWith("\""))
-                value = value.Substring(1, value.Length - 2).Replace("\"\"", "\"");
-            return value;
+            try
+            {
+                var heroes = _heroService.GetAllHeroes()
+                    .Where(h => h != null && h.IsValid())
+                    .OrderBy(h => h.Id)
+                    .Select(h => new KeyValuePair<int, string>(h.Id, $"{h.Id} - {h.Name}"))
+                    .ToList();
+                
+                if (heroes.Count == 0)
+                {
+                    MessageBox.Show("No valid heroes found in the data file.", "No Data", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                
+                cboId.DataSource = heroes;
+                cboId.DisplayMember = "Value";
+                cboId.ValueMember = "Key";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to load hero IDs.\n" + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
